@@ -113,9 +113,9 @@ def estimate_nominal_cycle(Qnet, P, Qfuel, LHV, psteam, Tsteam, isentropic):
     else:
         raise ValueError("One or more of the variables (msteam, Pestimated, Qfuel, pcond_guess) is not positive.")
 
-def BECCS_stress( 
-    Qnet = 140,          #[MW] net district heating, NOTE roughly 40MW should be FGC?
-    P = 48.3,            #[MW] net power, or 54.7 gross power ~ my rankine cycle!
+def regret_BECCS( 
+    Qnet = 140,          #[MW] net district heating
+    P = 48.3,            #[MW] net power
     Qfuel = 174,         #[MW] LHV
     LHV = 10.44,         #[MJ/kg] return wood, shredded wood, GROT @39.1%moisture
     psteam = 95,         #[bar]
@@ -139,10 +139,12 @@ def BECCS_stress(
     t0 = 2027           #[year]
     Tin = 42.6          #[C] 35-50C
     Tout = 88.6         #[C] 70-105C
+    O2eff = 0.90        #[-] for CLC
+    Wasu = 230*3.6      #[MJ/tO2], ref. is the macroscopic study
 
     # Determining reference case energy balance
+    print("Maybe remove estimate_nominal_cycle() if it is irrelevant")
     Qfuel, Qcond, Qfgc, Qnet, P, states = estimate_nominal_cycle(Qnet, P, Qfuel, LHV, psteam, Tsteam, isentropic)
-    print(Qfgc)
     mfuel = Qfuel/LHV           #[kgf/s]
     memitted = 1.1024 * mfuel   #[kgCO2/s]
     mcaptured = 0
@@ -157,18 +159,35 @@ def BECCS_stress(
     mcaptured = memitted * rate #[kgCO2/s]
     memitted = memitted * (1-rate)
     Qreb = 2.24 * mcaptured     #[MW]
-    print(Qreb)
 
-    Pgross = 50.1/37.1 * Qreb
-    Pparasitic = 18.1/37.1 * Qreb 
-    Pnet = Pgross - Pparasitic
-
+    Pnet = 31.8/37.1 * Qreb 
     Qcond = 73.7/37.1 * Qreb
     Qrec = (11+21.7)/37.1 * Qreb
     Qnet = Qcond + Qrec + Qfgc
     operating += operating_increase[0]
     AMINE = DecidedTech("amine", Qfuel, Qnet, Pnet, memitted, mcaptured, operating)
     AMINE.print()
+
+    # Determining CLC energy balance
+    mcaptured = 1.1024 * mfuel  #[kgCO2/s]
+    memitted = 0
+
+    O2demand = 0.024045 * mfuel #[kmol/s]
+    LHVO2 = LHV/0.024045        #[MJ/kmolO2] 
+    O2oc = O2demand * O2eff
+    O2oxy = O2demand * (1-O2eff)
+
+    dHox = 479                  #[MJ/kmolO2], released in AR during oxidation of OC
+    dHred = LHVO2 - dHox        #[MJ/kmolO2], released in FR during reduction of OC (positive=>exotherm, otherwise endo)
+    Qar = dHox * O2oc           #[MW]
+    Qfr = dHred * O2oc
+    Qoxy = LHVO2 * O2oxy
+    print("CLC heat summarizes to: ", sum([Qar, Qfr, Qoxy]) - Qfuel)
+
+    print("time to calculate flue gases (without N2) and other parameters for cost functions?")
+    print("I think the Pnet and Qnet is the same as the REF case, except for some Poxypolish")
+    print("Pclc without asu =", REF.P)
+    print("Pclc with asu =", REF.P - Wasu*O2oxy, "no wait, need to match the units of Wasu and O2oxy!!!")
 
     regret = 1
     return regret
@@ -179,5 +198,5 @@ if __name__ == "__main__":
     aspen_df = pd.read_csv("amine.csv", sep=";", decimal=',')
     aspen_interpolators = create_interpolators(aspen_df)
 
-    regret = BECCS_stress(interpolators = aspen_interpolators)
+    regret = regret_BECCS(interpolators = aspen_interpolators)
     print(regret)

@@ -33,7 +33,7 @@ class State:
         if self.p is None or self.T is None or self.s is None or self.h is None:
             raise ValueError("Steam properties cannot be determined")
 
-class DecidedTech:
+class ConversionTech:
     def __init__(self, name, Qfuel=0, Qnet=0, P=0, memitted=0, mcaptured=0, operating=0):
         self.name = name
         self.Qfuel = Qfuel
@@ -126,19 +126,33 @@ def regret_BECCS(
     t=25, # technical is >20, economic is =20
     celc=40,
     cheat=0.80,
-    cbio=99999999,
+    cbio=35,
+    CEPCI=800, 
+    sek=0.089,
+    usd=0.96,
 
-    technology = ["amine","oxy","clc"],
+    technology = ["ref", "amine","oxy","clc"],
     rate = 0.90, # "high rates needed" (Ramboll Design), so maybe 86-94%?
     operating_increase = [0, 600, 1200],
-    timing = [5,10,15,20,25],
+    timing = [0,5,10,15,20], # represents when C&L+amines+ASUs are built, and T&S are paid for, and revenues gained!
 
     interpolators = None
 ):
+    economic_assumptions = {
+        "i": i,
+        "t": t,  # technical is >20, economic is =20
+        "celc": celc,
+        "cheat": cheat,
+        "cbio": cbio,
+        "CEPCI": CEPCI,
+        "sek": sek, #SEK=>EUR
+        "usd": usd  #USD=>EUR
+    }
+
     operating = 4500    #[h]
-    t0 = 2027           #[year]
-    Tin = 42.6          #[C] 35-50C
-    Tout = 88.6         #[C] 70-105C
+    # t0 = 2027           #[year]
+    # Tin = 42.6          #[C] 35-50C
+    # Tout = 88.6         #[C] 70-105C
     O2eff = 0.90        #[-] for CLC
     Wasu = 230*3.6      #[MJ/tO2], ref. is the macroscopic study
 
@@ -149,7 +163,7 @@ def regret_BECCS(
     memitted = 1.1024 * mfuel   #[kgCO2/s]
     mcaptured = 0
     Pparasitic = 6.4
-    REF = DecidedTech("ref", Qfuel, Qnet, P-Pparasitic, memitted, mcaptured, operating)
+    REF = ConversionTech("ref", Qfuel, Qnet, P-Pparasitic, memitted, mcaptured, operating)
     REF.print()
 
     # Determining amine case (with HR) energy balance
@@ -165,14 +179,11 @@ def regret_BECCS(
     Qrec = (11+21.7)/37.1 * Qreb
     Qnet = Qcond + Qrec + Qfgc
     operating += operating_increase[0]
-    AMINE = DecidedTech("amine", Qfuel, Qnet, Pnet, memitted, mcaptured, operating)
+    AMINE = ConversionTech("amine", Qfuel, Qnet, Pnet, memitted, mcaptured, operating)
     AMINE.print()
 
     # Determining CLC energy balance
-    mcaptured = 1.1024 * mfuel  #[kgCO2/s]
-    memitted = 0
-
-    O2demand = 0.024045 * mfuel #[kmol/s]
+    O2demand = 0.024045 * mfuel #[kmolO2/s]
     LHVO2 = LHV/0.024045        #[MJ/kmolO2] 
     O2oc = O2demand * O2eff
     O2oxy = O2demand * (1-O2eff)
@@ -184,10 +195,77 @@ def regret_BECCS(
     Qoxy = LHVO2 * O2oxy
     print("CLC heat summarizes to: ", sum([Qar, Qfr, Qoxy]) - Qfuel)
 
-    print("time to calculate flue gases (without N2) and other parameters for cost functions?")
-    print("I think the Pnet and Qnet is the same as the REF case, except for some Poxypolish")
-    print("Pclc without asu =", REF.P)
-    print("Pclc with asu =", REF.P - Wasu*O2oxy, "no wait, need to match the units of Wasu and O2oxy!!!")
+    mCO2 = 1.1024 * mfuel               #[kgCO2/s]
+    mH2O = 0.7416 * mfuel               #[kgH2O/s]
+    mfluegas = mCO2 + mH2O + O2oxy*32   #[kg/s], inside the post-oxidation chamber (incl. O2oxy)
+    mash = 0.013*mfuel
+ 
+    P = REF.P
+    Pasu = Wasu/1000*O2oxy*32           #[MW] 
+    Pnet = P - Pasu
+    mcaptured = mCO2 * rate             #[kgCO2/s], assuming some CO2 is just vented...
+    memitted = mCO2 * (1-rate)
+    operating += operating_increase[0]
+
+    Afr = 1300 * Qfuel/200
+    print("Afr should not be scaled like this!-Magnus")
+    CLC = ConversionTech("clc", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating)
+    CLC.mfluegas = mfluegas
+    CLC.print()
+
+    # Determining oxyfuel energy balance
+    print("Currently not accounting for reduced oxyfuel-boiler size")
+    P = REF.P
+    Pasu = Wasu/1000*O2demand*32        #[MW] 
+    Pnet = P - Pasu
+    mcaptured = mCO2 * rate             #[kgCO2/s], assuming some CO2 is just vented...
+    memitted = mCO2 * (1-rate)
+    operating += operating_increase[0]
+    OXY = ConversionTech("oxy", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating)
+    OXY.print()
+
+    ### -------------- NEW SECTION ON COSTS AND NPV ------------- ###
+    # I need the CAPEX of each ConversionTech.
+    # I (later) need transient T&S and CO2 price scenarios. And of CEPCIs???
+    # CAPEX: I formulate shopping lists, including the parameter and its base-year CEPCI. NOTE: we exclude most "shared" items, e.g. turbines and FGC
+
+    # Calculating CAPEX [MEUR]:
+    REF.shopping_list = {
+        'AR' : (0.288*REF.Qfuel+5.08)*usd * CEPCI/576.1
+    }
+    AMINE.shopping_list = {
+        'AR' : (0.288*AMINE.Qfuel+5.08)*usd * CEPCI/576.1,
+        'amines' : (2000*sek * AMINE.mcaptured/16.6), # assuming a linear relationship between mcaptured and CAPEX... Let's remove the CL capex cost:
+        'CL' : 25.5 * AMINE.mcaptured/37.31    
+    }
+    print("Remember to subtract the CL")
+    CLC.shopping_list = {
+        'FR' : (4.98*(Afr/1531)**0.6)*usd * CEPCI/585.7, 
+        'AR' : (0.288*CLC.Qfuel+5.08)*usd * CEPCI/576.1,
+        'POC' : ( 48.67*10**-6*(CLC.mfluegas) * (1 + np.exp(0.018*(850+273.15)-26.4)) * 1/(0.995-0.98) )*usd * CEPCI/585.7,
+        'ASU' : ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6,
+        'OCash' : (6.57*(mash/6)**0.65)*usd * CEPCI/603.1,
+    }
+    OXY.shopping_list = {
+        'AR' : (0.288*OXY.Qfuel+5.08)*usd * CEPCI/576.1,
+        'ASU' : ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2demand*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6,
+    }
+    TECHS = [REF, AMINE, CLC, OXY]
+
+    print("CAPEX seems ok, but amines are high as they account for ALL plant equipment (unlike the other techs)")
+    for tech in TECHS:
+        print(f"Technology: {tech.name}")  # Print the technology name
+        for item, cost in tech.shopping_list.items():  # Loop through each item and its cost in shopping_list
+            print(f"  Item: {item}, Cost: {cost}")
+        print("\n")  # Add a newline for better readability
+
+    def calculate_NPV(TECH, economic_assumptions, timing):
+
+        NPV = 1
+        return NPV
+
+    for TECH in [REF, AMINE, CLC, OXY]:
+        NPV = calculate_NPV(TECH, economic_assumptions, timing)
 
     regret = 1
     return regret

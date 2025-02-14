@@ -126,10 +126,16 @@ def regret_BECCS(
     t=25, # technical is >20, economic is =20
     celc=40,
     cheat=0.80,
-    cbio=35,
+    cbio=25,
     CEPCI=800, 
     sek=0.089,
     usd=0.96,
+
+    EPC=0.175,
+    contingency_process=0.05,
+    contingency_clc=0.40,
+    contingency_project=0.20,
+    ownercost=0.20,
 
     technology = ["ref", "amine","oxy","clc"],
     rate = 0.90, # "high rates needed" (Ramboll Design), so maybe 86-94%?
@@ -146,7 +152,12 @@ def regret_BECCS(
         "cbio": cbio,
         "CEPCI": CEPCI,
         "sek": sek, #SEK=>EUR
-        "usd": usd  #USD=>EUR
+        "usd": usd,  #USD=>EUR
+        "EPC": EPC,
+        "contingency_process": contingency_process,
+        "contingency_clc": contingency_clc, 
+        "contingency_project": contingency_project,
+        "ownercost": ownercost
     }
 
     operating = 4500    #[h]
@@ -224,40 +235,65 @@ def regret_BECCS(
     OXY = ConversionTech("oxy", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating)
     OXY.print()
 
+    # Determining C&L balances
+    Wcompr = 13.17/37.31 * mcaptured #[MW/kgCO2/s * kgCO2/s] Deng's massflow and work
+    Qcool  = 43.30/37.31 * mcaptured #[MW/kgCO2/s * kgCO2/s]
+
     ### -------------- NEW SECTION ON COSTS AND NPV ------------- ###
     # I need the CAPEX of each ConversionTech.
     # I (later) need transient T&S and CO2 price scenarios. And of CEPCIs???
     # CAPEX: I formulate shopping lists, including the parameter and its base-year CEPCI. NOTE: we exclude most "shared" items, e.g. turbines and FGC
+    print("Current logic: the AMINE CAPEX is well-defined, but includes C&L. I thus need to add a CAPEX estimate of C&L to CLC+OXY which is not completely the same as for the AMINES.")
+    print("That is sad. But, the CAPEX of C&L is not significant anyway - the OPEX is what matters. And OPEX will be similar (the same) across technologies!")
 
     # Calculating CAPEX [MEUR]:
     REF.shopping_list = {
-        'AR' : (0.288*REF.Qfuel+5.08)*usd * CEPCI/576.1
+        # 'AR' : (0.288*REF.Qfuel+5.08)*usd * CEPCI/576.1
     }
     AMINE.shopping_list = {
-        'AR' : (0.288*AMINE.Qfuel+5.08)*usd * CEPCI/576.1,
         'amines' : (2000*sek * AMINE.mcaptured/16.6), # assuming a linear relationship between mcaptured and CAPEX... Let's remove the CL capex cost:
-        'CL' : 25.5 * AMINE.mcaptured/37.31    
     }
-    print("Remember to subtract the CL")
     CLC.shopping_list = {
-        'FR' : (4.98*(Afr/1531)**0.6)*usd * CEPCI/585.7, 
-        'AR' : (0.288*CLC.Qfuel+5.08)*usd * CEPCI/576.1,
-        'POC' : ( 48.67*10**-6*(CLC.mfluegas) * (1 + np.exp(0.018*(850+273.15)-26.4)) * 1/(0.995-0.98) )*usd * CEPCI/585.7,
-        'ASU' : ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6,
-        'OCash' : (6.57*(mash/6)**0.65)*usd * CEPCI/603.1,
+        'FR' : (4.98*(Afr/1531)**0.6)*usd * CEPCI/585.7 *1.4, 
+        'cyclone' : 0.345*( 3 )*usd * CEPCI/576.1 *1.4, 
+        'POC' : ( 48.67*10**-6*(CLC.mfluegas) * (1 + np.exp(0.018*(850+273.15)-26.4)) * 1/(0.995-0.98) )*usd * CEPCI/585.7 *1.3,
+        'ASU' : ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6 *1.3,
+        'OCash' : (6.57*(mash/6)**0.65)*usd * CEPCI/603.1 *1.2,
+        'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  #Assuming that Deng had cost year = 2019 NOTE: unclear if installation 1.3 should be included or not?
+        'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2, #Function from Judit, 4000m3 from Ramboll, CEPCI from Google
     }
     OXY.shopping_list = {
-        'AR' : (0.288*OXY.Qfuel+5.08)*usd * CEPCI/576.1,
-        'ASU' : ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2demand*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6,
+        'ASU' : ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2demand*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6 *1.3,
+        'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  
+        'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2,  
     }
+    print("Neglected costs for CLC and OXY: molecular sieves, pumps/fans, minor HEXs,")
     TECHS = [REF, AMINE, CLC, OXY]
 
-    print("CAPEX seems ok, but amines are high as they account for ALL plant equipment (unlike the other techs)")
-    for tech in TECHS:
-        print(f"Technology: {tech.name}")  # Print the technology name
-        for item, cost in tech.shopping_list.items():  # Loop through each item and its cost in shopping_list
-            print(f"  Item: {item}, Cost: {cost}")
-        print("\n")  # Add a newline for better readability
+    def escalate_costs(tech, economic_assumptions):
+        BEC = sum(tech.shopping_list.values())
+        EPCC = BEC*(1 + EPC)
+
+        if tech.name=="clc":
+            contingency_process = economic_assumptions["contingency_clc"]
+        else:
+            contingency_process = economic_assumptions["contingency_process"]
+
+        print(tech.name, contingency_process, BEC, contingency_process*BEC)
+        TPC = EPCC + contingency_process*BEC + contingency_project*(EPCC + contingency_process*BEC)
+        TOC = TPC*(1 + ownercost)
+        TCR = 1.154*TOC #Check Macroscopic ref
+        CAPEX = TCR
+
+        return CAPEX
+
+    # Calculate and print total costs for CLC and OXY
+    total_cost_CLC = escalate_costs(CLC, economic_assumptions)
+    total_cost_OXY = escalate_costs(OXY, economic_assumptions)
+
+    print(f"Total cost for CLC: {total_cost_CLC:.2f} MEUR")
+    print(f"Total cost for OXY: {total_cost_OXY:.2f} MEUR")
+    print(f"Total cost for AMINE: {sum(AMINE.shopping_list.values()):.2f} MEUR")
 
     def calculate_NPV(TECH, economic_assumptions, timing):
 

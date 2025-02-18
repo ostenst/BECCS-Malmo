@@ -42,6 +42,10 @@ class ConversionTech:
         self.memitted = memitted
         self.mcaptured = mcaptured
         self.operating = operating
+        self.operating_increase = 0
+        self.shopping_list = None
+        self.CAPEX_initial = None
+        self.CAPEX = None
 
     def print(self):
         """Prints the attributes of the object in a formatted table with units."""
@@ -122,8 +126,8 @@ def regret_BECCS(
     Tsteam = 525,        #[C]
     isentropic=0.85,
 
-    i=0.075,
-    t=25, # technical is >20, economic is =20
+    dr=0.075,
+    lifetime=25, # technical is >20, economic is =20
     celc=40,
     cheat=0.80,
     cbio=25,
@@ -140,13 +144,13 @@ def regret_BECCS(
     technology = ["ref", "amine","oxy","clc"],
     rate = 0.90, # "high rates needed" (Ramboll Design), so maybe 86-94%?
     operating_increase = [0, 600, 1200],
-    timing = [0,5,10,15,20], # represents when C&L+amines+ASUs are built, and T&S are paid for, and revenues gained!
+    timing = [5,10,15,20], # represents when C&L+amines+ASUs are built, and T&S are paid for, and revenues gained!
 
     interpolators = None
 ):
     economic_assumptions = {
-        "i": i,
-        "t": t,  # technical is >20, economic is =20
+        "dr": dr,
+        "lifetime": lifetime,  # technical is >20, economic is =20
         "celc": celc,
         "cheat": cheat,
         "cbio": cbio,
@@ -154,9 +158,9 @@ def regret_BECCS(
         "sek": sek, #SEK=>EUR
         "usd": usd,  #USD=>EUR
         "EPC": EPC,
-        "contingency_process": contingency_process,
-        "contingency_clc": contingency_clc, 
-        "contingency_project": contingency_project,
+        "contingency_process": contingency_process, #applies to oxy
+        "contingency_clc": contingency_clc,         #applies to clc
+        "contingency_project": contingency_project, #applies to oxy and clc
         "ownercost": ownercost
     }
 
@@ -209,7 +213,7 @@ def regret_BECCS(
     mCO2 = 1.1024 * mfuel               #[kgCO2/s]
     mH2O = 0.7416 * mfuel               #[kgH2O/s]
     mfluegas = mCO2 + mH2O + O2oxy*32   #[kg/s], inside the post-oxidation chamber (incl. O2oxy)
-    mash = 0.013*mfuel
+    mash = 0.01375*mfuel
  
     P = REF.P
     Pasu = Wasu/1000*O2oxy*32           #[MW] 
@@ -246,7 +250,7 @@ def regret_BECCS(
     print("Current logic: the AMINE CAPEX is well-defined, but includes C&L. I thus need to add a CAPEX estimate of C&L to CLC+OXY which is not completely the same as for the AMINES.")
     print("That is sad. But, the CAPEX of C&L is not significant anyway - the OPEX is what matters. And OPEX will be similar (the same) across technologies!")
 
-    # Calculating CAPEX [MEUR]:
+    # Calculating CAPEX per item [MEUR]:
     REF.shopping_list = {
         # 'AR' : (0.288*REF.Qfuel+5.08)*usd * CEPCI/576.1
     }
@@ -258,7 +262,7 @@ def regret_BECCS(
         'cyclone' : 0.345*( 3 )*usd * CEPCI/576.1 *1.4, 
         'POC' : ( 48.67*10**-6*(CLC.mfluegas) * (1 + np.exp(0.018*(850+273.15)-26.4)) * 1/(0.995-0.98) )*usd * CEPCI/585.7 *1.3,
         'ASU' : ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6 *1.3,
-        'OCash' : (6.57*(mash/6)**0.65)*usd * CEPCI/603.1 *1.2,
+        'OCash' : (4.6*(mash/6.7)**0.56)*usd * CEPCI/603.1 *1.2,
         'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  #Assuming that Deng had cost year = 2019 NOTE: unclear if installation 1.3 should be included or not?
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2, #Function from Judit, 4000m3 from Ramboll, CEPCI from Google
     }
@@ -267,41 +271,79 @@ def regret_BECCS(
         'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2,  
     }
-    print("Neglected costs for CLC and OXY: molecular sieves, pumps/fans, minor HEXs,")
-    TECHS = [REF, AMINE, CLC, OXY]
+    print("Neglected costs for CLC and OXY: flue gas cleaning FGC, molecular sieves, pumps/fans, minor HEXs. But double counting OCash collection for CLC")
+    print("Also escalating the C&L and ASU of CLC way more than for oxyfuel, i.e. 40 vs 5 %")
+    print("Assuming that FGC is roughly equally costly for all options, and that our C&L CAPEX estimation is comparable to the estimation in amine CAPEX")
 
-    def escalate_costs(tech, economic_assumptions):
-        BEC = sum(tech.shopping_list.values())
+    # Escalating CAPEX
+    REF.CAPEX = 0
+    AMINE.CAPEX = sum(AMINE.shopping_list.values())
+
+    initial_items = ['FR', 'cyclone', 'POC', 'OCash']
+    delayed_items = ['ASU', 'CL', 'interim']
+    CAPEX = []
+    for items, contingency_i in [[initial_items, contingency_clc],[delayed_items, contingency_process]]:
+        BEC =  sum(value for key, value in CLC.shopping_list.items() if key in items)
         EPCC = BEC*(1 + EPC)
-
-        if tech.name=="clc":
-            contingency_process = economic_assumptions["contingency_clc"]
-        else:
-            contingency_process = economic_assumptions["contingency_process"]
-
-        print(tech.name, contingency_process, BEC, contingency_process*BEC)
-        TPC = EPCC + contingency_process*BEC + contingency_project*(EPCC + contingency_process*BEC)
+        TPC = EPCC + contingency_i*BEC + contingency_project*(EPCC + contingency_i*BEC)
         TOC = TPC*(1 + ownercost)
         TCR = 1.154*TOC #Check Macroscopic ref
-        CAPEX = TCR
+        CAPEX.append(TCR)
+    CLC.CAPEX_initial = CAPEX[0]
+    CLC.CAPEX = CAPEX[1]
 
-        return CAPEX
+    BEC =  sum(OXY.shopping_list.values())
+    EPCC = BEC*(1 + EPC)
+    TPC = EPCC + contingency_process*BEC + contingency_project*(EPCC + contingency_process*BEC)
+    TOC = TPC*(1 + ownercost)
+    TCR = 1.154*TOC #Check Macroscopic ref
+    OXY.CAPEX = TCR
 
-    # Calculate and print total costs for CLC and OXY
-    total_cost_CLC = escalate_costs(CLC, economic_assumptions)
-    total_cost_OXY = escalate_costs(OXY, economic_assumptions)
+    TECHS = [REF,AMINE,CLC,OXY]
+    for tech in TECHS:
+        if tech.CAPEX_initial!=None:
+            print("CAPEX", tech.CAPEX + tech.CAPEX_initial)
+        else:
+            print("CAPEX", tech.CAPEX)
+        # self.name = name
+        # self.Qfuel = Qfuel
+        # self.Qnet = Qnet
+        # self.P = P
+        # self.memitted = memitted
+        # self.mcaptured = mcaptured
+        # self.operating = operating
 
-    print(f"Total cost for CLC: {total_cost_CLC:.2f} MEUR")
-    print(f"Total cost for OXY: {total_cost_OXY:.2f} MEUR")
-    print(f"Total cost for AMINE: {sum(AMINE.shopping_list.values()):.2f} MEUR")
+    # Calculating NPV
+    def calculate_NPV(TECH, timing):
 
-    def calculate_NPV(TECH, economic_assumptions, timing):
+        CAPEX_timing = {timing: TECH.CAPEX}
+        if TECH.CAPEX_initial is not None: 
+            CAPEX_timing[0] = TECH.CAPEX_initial/2 # Assuming 50% of CAPEX for 2 construction years
+            CAPEX_timing[1] = TECH.CAPEX_initial/2
+
+        NPV = 0
+        for t in range(0, lifetime):
+
+            # I need a gate determining: have we invested or not? 
+            print("ISSUE: THESE CHOICES SHOULD HAVE DIFFERENT ECONOMIC LIFETIMES - AND I AM NOT REFLECTING THIS CURRENTLY!")
+            # CAPEX is added
+            costs = 0
+            if t in CAPEX_timing:
+                costs -= CAPEX_timing[t] #[MEUR]
+            
+            # OPEX from energy is just biomass - the regretNPV is relative so elc is included there!
+            costs -= TECH.Qfuel * TECH.operating * cbio *10**-6 #[MEUR/yr]
+
+            
+
+
+            
 
         NPV = 1
         return NPV
 
     for TECH in [REF, AMINE, CLC, OXY]:
-        NPV = calculate_NPV(TECH, economic_assumptions, timing)
+        NPV = calculate_NPV(TECH, timing[2])
 
     regret = 1
     return regret

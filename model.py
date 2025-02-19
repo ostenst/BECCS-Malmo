@@ -125,6 +125,8 @@ def regret_BECCS(
     psteam = 95,         #[bar]
     Tsteam = 525,        #[C]
     isentropic=0.85,
+    O2eff = 0.90,        #[-] for CLC
+    Wasu = 230*3.6,      #[MJ/tO2], ref. is the macroscopic study
 
     dr=0.075,
     lifetime=25, # technical is >20, economic is =20
@@ -134,6 +136,9 @@ def regret_BECCS(
     CEPCI=800, 
     sek=0.089,
     usd=0.96,
+    ctrans=50,
+    cstore=30,
+    crc=100,
 
     EPC=0.175,
     contingency_process=0.05,
@@ -141,36 +146,13 @@ def regret_BECCS(
     contingency_project=0.20,
     ownercost=0.20,
 
-    technology = ["ref", "amine","oxy","clc"],
+    decision = "amine", # ["ref", "amine","oxy","clc"],
     rate = 0.90, # "high rates needed" (Ramboll Design), so maybe 86-94%?
-    operating_increase = [0, 600, 1200],
-    timing = [5,10,15,20], # represents when C&L+amines+ASUs are built, and T&S are paid for, and revenues gained!
+    operating = 4500,
+    operating_increase = 600, # [0, 600, 1200],
+    timing = 10, # [5, 10, 15, 20] represents when C&L+amines+ASUs are built, and T&S are paid for, and revenues gained!
 
-    interpolators = None
 ):
-    economic_assumptions = {
-        "dr": dr,
-        "lifetime": lifetime,  # technical is >20, economic is =20
-        "celc": celc,
-        "cheat": cheat,
-        "cbio": cbio,
-        "CEPCI": CEPCI,
-        "sek": sek, #SEK=>EUR
-        "usd": usd,  #USD=>EUR
-        "EPC": EPC,
-        "contingency_process": contingency_process, #applies to oxy
-        "contingency_clc": contingency_clc,         #applies to clc
-        "contingency_project": contingency_project, #applies to oxy and clc
-        "ownercost": ownercost
-    }
-
-    operating = 4500    #[h]
-    # t0 = 2027           #[year]
-    # Tin = 42.6          #[C] 35-50C
-    # Tout = 88.6         #[C] 70-105C
-    O2eff = 0.90        #[-] for CLC
-    Wasu = 230*3.6      #[MJ/tO2], ref. is the macroscopic study
-
     # Determining reference case energy balance
     print("Maybe remove estimate_nominal_cycle() if it is irrelevant")
     Qfuel, Qcond, Qfgc, Qnet, P, states = estimate_nominal_cycle(Qnet, P, Qfuel, LHV, psteam, Tsteam, isentropic)
@@ -193,8 +175,7 @@ def regret_BECCS(
     Qcond = 73.7/37.1 * Qreb
     Qrec = (11+21.7)/37.1 * Qreb
     Qnet = Qcond + Qrec + Qfgc
-    operating += operating_increase[0]
-    AMINE = ConversionTech("amine", Qfuel, Qnet, Pnet, memitted, mcaptured, operating)
+    AMINE = ConversionTech("amine", Qfuel, Qnet, Pnet, memitted, mcaptured, operating+operating_increase)
     AMINE.print()
 
     # Determining CLC energy balance
@@ -220,11 +201,10 @@ def regret_BECCS(
     Pnet = P - Pasu
     mcaptured = mCO2 * rate             #[kgCO2/s], assuming some CO2 is just vented...
     memitted = mCO2 * (1-rate)
-    operating += operating_increase[0]
 
     Afr = 1300 * Qfuel/200
     print("Afr should not be scaled like this!-Magnus")
-    CLC = ConversionTech("clc", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating)
+    CLC = ConversionTech("clc", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating+operating_increase)
     CLC.mfluegas = mfluegas
     CLC.print()
 
@@ -235,8 +215,7 @@ def regret_BECCS(
     Pnet = P - Pasu
     mcaptured = mCO2 * rate             #[kgCO2/s], assuming some CO2 is just vented...
     memitted = mCO2 * (1-rate)
-    operating += operating_increase[0]
-    OXY = ConversionTech("oxy", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating)
+    OXY = ConversionTech("oxy", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating+operating_increase)
     OXY.print()
 
     # Determining C&L balances
@@ -302,57 +281,62 @@ def regret_BECCS(
     TECHS = [REF,AMINE,CLC,OXY]
     for tech in TECHS:
         if tech.CAPEX_initial!=None:
-            print("CAPEX", tech.CAPEX + tech.CAPEX_initial)
+            print("CAPEX", tech.CAPEX, tech.CAPEX_initial)
         else:
             print("CAPEX", tech.CAPEX)
-        # self.name = name
-        # self.Qfuel = Qfuel
-        # self.Qnet = Qnet
-        # self.P = P
-        # self.memitted = memitted
-        # self.mcaptured = mcaptured
-        # self.operating = operating
 
-    # Calculating NPV
-    def calculate_NPV(TECH, timing):
+    # Calculating NPV regret
+    def calculate_NPV(TECH):
+        analysis_period = timing + lifetime # Example: invest after 5, lifetime of 25 => 30 years
 
-        CAPEX_timing = {timing: TECH.CAPEX}
-        if TECH.CAPEX_initial is not None: 
-            CAPEX_timing[0] = TECH.CAPEX_initial/2 # Assuming 50% of CAPEX for 2 construction years
-            CAPEX_timing[1] = TECH.CAPEX_initial/2
-
+        invested = False
         NPV = 0
-        for t in range(0, lifetime):
+        for t in range(1, analysis_period):
 
-            # I need a gate determining: have we invested or not? 
-            print("ISSUE: THESE CHOICES SHOULD HAVE DIFFERENT ECONOMIC LIFETIMES - AND I AM NOT REFLECTING THIS CURRENTLY!")
-            # CAPEX is added
+            # Adding CAPEX
             costs = 0
-            if t in CAPEX_timing:
-                costs -= CAPEX_timing[t] #[MEUR]
+            revenues = 0
+            if (t==1 or t==2) and TECH.CAPEX_initial is not None:
+                costs += TECH.CAPEX_initial/2 #[MEUR] Assuming 50% of CAPEX for 2 construction years
+
+            if t==timing or t==timing+1:
+                invested = True # Implies the energy balance (Qdh, Pel, Qfuel) has changed, incl. (C&L and ASU) and that T&S is operated
+                costs += TECH.CAPEX/2 #[MEUR]
+
+            # Adding OPEX and revenues
+            if t>timing+1 and invested:
+                costs += TECH.Qfuel * TECH.operating * cbio *10**-6 #[MEUR/yr]
+                costs += TECH.mcaptured/1000*3600 * TECH.operating * (ctrans + cstore) *10**-6 
+                revenues += ( TECH.Qnet*(cheat*celc) + TECH.P*celc )*TECH.operating *10**-6 #[MEUR/yr]
+                revenues += TECH.mcaptured/1000*3600 * TECH.operating * crc *10**-6
+            else:
+                costs += REF.Qfuel * REF.operating * cbio *10**-6 
+                revenues += ( REF.Qnet*(cheat*celc) + REF.P*celc )*REF.operating *10**-6 #[MEUR/yr]
             
-            # OPEX from energy is just biomass - the regretNPV is relative so elc is included there!
-            costs -= TECH.Qfuel * TECH.operating * cbio *10**-6 #[MEUR/yr]
+            NPV += (revenues-costs) / (1+dr)**t
 
-            
-
-
-            
-
-        NPV = 1
         return NPV
 
-    for TECH in [REF, AMINE, CLC, OXY]:
-        NPV = calculate_NPV(TECH, timing[2])
+    def calculate_regret(chosen_tech, npv_values):
+        max_npv = max(npv_values.values())
+        regret = max_npv - npv_values[chosen_tech] 
+        return regret
 
-    regret = 1
-    return regret
+    TECHS = [REF, AMINE, CLC, OXY]
+    npv_values = {tech.name: calculate_NPV(tech) for tech in TECHS}
+    regret_values = {tech.name: calculate_regret(tech.name, npv_values) for tech in TECHS}
+    for tech in TECHS:
+        print(f"{tech.name}: NPV = {npv_values[tech.name]}, Regret = {regret_values[tech.name]}")
+    
+    regret_decision = regret_values[decision]
+
+    return regret_decision, regret_values["ref"],  regret_values["amine"],  regret_values["clc"],  regret_values["oxy"]
 
 
 if __name__ == "__main__":
 
-    aspen_df = pd.read_csv("amine.csv", sep=";", decimal=',')
-    aspen_interpolators = create_interpolators(aspen_df)
+    # aspen_df = pd.read_csv("amine.csv", sep=";", decimal=',')
+    # aspen_interpolators = create_interpolators(aspen_df)
 
-    regret = regret_BECCS(interpolators = aspen_interpolators)
-    print(regret)
+    regret_decision, ref, amine, clc, oxy = regret_BECCS()
+    print("I regret my decision this much in terms of NPV [MEUR]:\n", regret_decision, ref, amine, clc, oxy)

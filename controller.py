@@ -1,5 +1,6 @@
 import numpy as np
 from model import *
+import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 from ema_workbench import (
@@ -63,9 +64,20 @@ model.constants = [
 ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
-n_scenarios = 10
-n_policies = 3
+n_scenarios = 80
+n_policies = 50
 
 results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.LHS, lever_sampling = Samplers.LHS)
 experiments, outcomes = results
 print(type(outcomes["regret_decision"]), outcomes["regret_decision"])
+
+outcomes_df = pd.DataFrame(outcomes)
+outcomes_df["decision"] = experiments["decision"]
+
+# Use boxplot to show distributions of all numerical outcomes grouped by decision
+for outcome in outcomes_df.keys():
+    if outcome != "decision":  # Exclude categorical variable
+        plt.figure(figsize=(8, 4))
+        sns.boxplot(x="decision", y=outcome, data=outcomes_df)
+        plt.title(f"Distribution of Regret (based on NPV difference in [MEUR]) by CAPTURE TECHNOLOGY")
+        plt.show()

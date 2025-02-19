@@ -70,22 +70,6 @@ class ConversionTech:
 
         print(f"{'-'*30}\n")
 
-def create_interpolators(aspen_df):
-    # extract 'Flow' and 'Rcapture' columns as x values, the rest are y values
-    x1 = aspen_df['Flow']
-    x2 = aspen_df['Rcapture']
-    x_values = np.column_stack((x1, x2))
-
-    y_values = aspen_df.drop(columns=['Flow', 'Rcapture']).values  
-    aspen_interpolators = {}
-
-    for idx, column_name in enumerate(aspen_df.drop(columns=['Flow', 'Rcapture']).columns):
-        y = y_values[:, idx]
-        interp_func = LinearNDInterpolator(x_values, y)
-        aspen_interpolators[column_name] = interp_func
-
-    return aspen_interpolators
-
 def estimate_nominal_cycle(Qnet, P, Qfuel, LHV, psteam, Tsteam, isentropic):
     mfuel = Qfuel/LHV
     HHV = LHV*1.15
@@ -118,6 +102,7 @@ def estimate_nominal_cycle(Qnet, P, Qfuel, LHV, psteam, Tsteam, isentropic):
         raise ValueError("One or more of the variables (msteam, Pestimated, Qfuel, pcond_guess) is not positive.")
 
 def regret_BECCS( 
+    #Uncertainties:
     Qnet = 140,          #[MW] net district heating
     P = 48.3,            #[MW] net power
     Qfuel = 174,         #[MW] LHV
@@ -146,6 +131,7 @@ def regret_BECCS(
     contingency_project=0.20,
     ownercost=0.20,
 
+    #Levers:
     decision = "amine", # ["ref", "amine","oxy","clc"],
     rate = 0.90, # "high rates needed" (Ramboll Design), so maybe 86-94%?
     operating = 4500,
@@ -328,9 +314,11 @@ def regret_BECCS(
     for tech in TECHS:
         print(f"{tech.name}: NPV = {npv_values[tech.name]}, Regret = {regret_values[tech.name]}")
     
+    print("Chosen decision:", decision)
     regret_decision = regret_values[decision]
+    print(type(regret_decision), regret_decision)
 
-    return regret_decision, regret_values["ref"],  regret_values["amine"],  regret_values["clc"],  regret_values["oxy"]
+    return {"regret_decision" : regret_decision}
 
 
 if __name__ == "__main__":
@@ -338,5 +326,5 @@ if __name__ == "__main__":
     # aspen_df = pd.read_csv("amine.csv", sep=";", decimal=',')
     # aspen_interpolators = create_interpolators(aspen_df)
 
-    regret_decision, ref, amine, clc, oxy = regret_BECCS()
-    print("I regret my decision this much in terms of NPV [MEUR]:\n", regret_decision, ref, amine, clc, oxy)
+    dict = regret_BECCS()
+    print("I regret my decision this much in terms of NPV [MEUR]:\n", dict["regret_decision"])

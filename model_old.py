@@ -124,8 +124,6 @@ def regret_BECCS(
     ctrans=50,
     cstore=30,
     crc=100,
-    cmea=29,    #SEK/kgmea (Ramboll)
-    coc=500,    #EUR/tOC Magnus/Felicia
 
     EPC=0.175,
     contingency_process=0.05,
@@ -142,14 +140,14 @@ def regret_BECCS(
 
 ):
     # Determining reference case energy balance
-    # print("Maybe remove estimate_nominal_cycle() if it is irrelevant")
+    print("Maybe remove estimate_nominal_cycle() if it is irrelevant")
     Qfuel, Qcond, Qfgc, Qnet, P, states = estimate_nominal_cycle(Qnet, P, Qfuel, LHV, psteam, Tsteam, isentropic)
     mfuel = Qfuel/LHV           #[kgf/s]
     memitted = 1.1024 * mfuel   #[kgCO2/s]
     mcaptured = 0
     Pparasitic = 6.4
     REF = ConversionTech("ref", Qfuel, Qnet, P-Pparasitic, memitted, mcaptured, operating)
-    # REF.print()
+    REF.print()
 
     # Determining amine case (with HR) energy balance
     mfluegas = 5.044 * mfuel    #[kg/s]
@@ -164,7 +162,7 @@ def regret_BECCS(
     Qrec = (11+21.7)/37.1 * Qreb
     Qnet = Qcond + Qrec + Qfgc
     AMINE = ConversionTech("amine", Qfuel, Qnet, Pnet, memitted, mcaptured, operating+operating_increase)
-    # AMINE.print()
+    AMINE.print()
 
     # Determining CLC energy balance
     O2demand = 0.024045 * mfuel #[kmolO2/s]
@@ -177,7 +175,7 @@ def regret_BECCS(
     Qar = dHox * O2oc           #[MW]
     Qfr = dHred * O2oc
     Qoxy = LHVO2 * O2oxy
-    # print("CLC heat summarizes to: ", sum([Qar, Qfr, Qoxy]) - Qfuel)
+    print("CLC heat summarizes to: ", sum([Qar, Qfr, Qoxy]) - Qfuel)
 
     mCO2 = 1.1024 * mfuel               #[kgCO2/s]
     mH2O = 0.7416 * mfuel               #[kgH2O/s]
@@ -190,26 +188,21 @@ def regret_BECCS(
     mcaptured = mCO2 * rate             #[kgCO2/s], assuming some CO2 is just vented...
     memitted = mCO2 * (1-rate)
 
-    # Afr = 1300 * Qfuel/200
-    # print("Afr should not be scaled like this!-Magnus")
-    Vfluegas = mfuel*(0.514 + 0.923)   #[Nm3/s] assuming no O2 in this flue gas... slightly inconsistent with mfluegas
-    Across = Vfluegas/5.5                   # Assumed 5.5m/s from Judit
-    print(Across)
-    Afr = 1300/20 * Across                  # Scaled linearly from Anders
-    print("Afr is very small, since Vfluegas is very small... how to calculate this? Not just H2O and CO2?")
+    Afr = 1300 * Qfuel/200
+    print("Afr should not be scaled like this!-Magnus")
     CLC = ConversionTech("clc", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating+operating_increase)
     CLC.mfluegas = mfluegas
-    # CLC.print()
+    CLC.print()
 
     # Determining oxyfuel energy balance
-    # print("Currently not accounting for reduced oxyfuel-boiler size")
+    print("Currently not accounting for reduced oxyfuel-boiler size")
     P = REF.P
     Pasu = Wasu/1000*O2demand*32        #[MW] 
     Pnet = P - Pasu
     mcaptured = mCO2 * rate             #[kgCO2/s], assuming some CO2 is just vented...
     memitted = mCO2 * (1-rate)
     OXY = ConversionTech("oxy", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating+operating_increase)
-    # OXY.print()
+    OXY.print()
 
     # Determining C&L balances
     Wcompr = 13.17/37.31 * mcaptured #[MW/kgCO2/s * kgCO2/s] Deng's massflow and work
@@ -219,8 +212,8 @@ def regret_BECCS(
     # I need the CAPEX of each ConversionTech.
     # I (later) need transient T&S and CO2 price scenarios. And of CEPCIs???
     # CAPEX: I formulate shopping lists, including the parameter and its base-year CEPCI. NOTE: we exclude most "shared" items, e.g. turbines and FGC
-    # print("Current logic: the AMINE CAPEX is well-defined, but includes C&L. I thus need to add a CAPEX estimate of C&L to CLC+OXY which is not completely the same as for the AMINES.")
-    # print("That is sad. But, the CAPEX of C&L is not significant anyway - the OPEX is what matters. And OPEX will be similar (the same) across technologies!")
+    print("Current logic: the AMINE CAPEX is well-defined, but includes C&L. I thus need to add a CAPEX estimate of C&L to CLC+OXY which is not completely the same as for the AMINES.")
+    print("That is sad. But, the CAPEX of C&L is not significant anyway - the OPEX is what matters. And OPEX will be similar (the same) across technologies!")
 
     # Calculating CAPEX per item [MEUR]:
     REF.shopping_list = {
@@ -243,9 +236,9 @@ def regret_BECCS(
         'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2,  
     }
-    # print("Neglected costs for CLC and OXY: flue gas cleaning FGC, molecular sieves, pumps/fans, minor HEXs. But double counting OCash collection for CLC")
-    # print("Also escalating the C&L and ASU of CLC way more than for oxyfuel, i.e. 40 vs 5 %")
-    # print("Assuming that FGC is roughly equally costly for all options, and that our C&L CAPEX estimation is comparable to the estimation in amine CAPEX")
+    print("Neglected costs for CLC and OXY: flue gas cleaning FGC, molecular sieves, pumps/fans, minor HEXs. But double counting OCash collection for CLC")
+    print("Also escalating the C&L and ASU of CLC way more than for oxyfuel, i.e. 40 vs 5 %")
+    print("Assuming that FGC is roughly equally costly for all options, and that our C&L CAPEX estimation is comparable to the estimation in amine CAPEX")
 
     # Escalating CAPEX
     REF.CAPEX = 0
@@ -272,6 +265,11 @@ def regret_BECCS(
     OXY.CAPEX = TCR
 
     TECHS = [REF,AMINE,CLC,OXY]
+    for tech in TECHS:
+        if tech.CAPEX_initial!=None:
+            print("CAPEX", tech.CAPEX, tech.CAPEX_initial)
+        else:
+            print("CAPEX", tech.CAPEX)
 
     # Calculating NPV regret
     def calculate_NPV(TECH):
@@ -295,11 +293,6 @@ def regret_BECCS(
             if t>timing+1 and invested:
                 costs += TECH.Qfuel * TECH.operating * cbio *10**-6 #[MEUR/yr]
                 costs += TECH.mcaptured/1000*3600 * TECH.operating * (ctrans + cstore) *10**-6 
-                if TECH.name=="amine":
-                    costs += cmea*sek *1.5 *TECH.mcaptured/1000*3600 * TECH.operating *10**-6 #1.5 from Ramboll
-                if TECH.name=="clc":
-                    costs += 1/1000 *TECH.Qfuel* TECH.operating* coc *10**-6 #1kgOC/MWhbr from Magnus
-                
                 revenues += ( TECH.Qnet*(cheat*celc) + TECH.P*celc )*TECH.operating *10**-6 #[MEUR/yr]
                 revenues += TECH.mcaptured/1000*3600 * TECH.operating * crc *10**-6
             else:
@@ -318,13 +311,16 @@ def regret_BECCS(
     TECHS = [REF, AMINE, CLC, OXY]
     npv_values = {tech.name: calculate_NPV(tech) for tech in TECHS}
     regret_values = {tech.name: calculate_regret(tech.name, npv_values) for tech in TECHS}
+    for tech in TECHS:
+        print(f"{tech.name}: NPV = {npv_values[tech.name]}, Regret = {regret_values[tech.name]}")
+    
+    print("Chosen decision:", decision)
+    regret_decision = regret_values[decision]
+    print(type(regret_decision), regret_decision)
 
     results = {
-        "regret_decision" : regret_values[decision],
-        "amine_capex" : AMINE.CAPEX,
-        "clc_capex" : CLC.CAPEX,
-        "oxy_capex" : OXY.CAPEX,
-        "ref_capex" : 0,
+        "regret_decision" : regret_decision,
+        "amine_capex" : AMINE.CAPEX
         }
 
     return results
@@ -337,5 +333,3 @@ if __name__ == "__main__":
 
     dict = regret_BECCS()
     print("I regret my decision this much in terms of NPV [MEUR]:\n", dict["regret_decision"])
-
-    print("I need to sync this with Fredrik before continuing! To follow the RDM framing phase")

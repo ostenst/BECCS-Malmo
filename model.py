@@ -339,3 +339,4 @@ if __name__ == "__main__":
     print("I regret my decision this much in terms of NPV [MEUR]:\n", dict["regret_decision"])
 
     print("I need to sync this with Fredrik before continuing! To follow the RDM framing phase")
+    print("To do that, I need to draw my different cases in detail - showcasing what is _the same_ between each cases")

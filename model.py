@@ -103,16 +103,10 @@ def estimate_nominal_cycle(Qnet, P, Qfuel, LHV, psteam, Tsteam, isentropic):
 
 def regret_BECCS( 
     #Uncertainties:
-    Qnet = 140,          #[MW] net district heating
-    P = 48.3,            #[MW] net power
-    Qfuel = 174,         #[MW] LHV
-    LHV = 10.44,         #[MJ/kg] return wood, shredded wood, GROT @39.1%moisture
-    psteam = 95,         #[bar]
-    Tsteam = 525,        #[C]
-    isentropic=0.85,
     O2eff = 0.90,        #[-] for CLC
     Wasu = 230*3.6,      #[MJ/tO2], ref. is the macroscopic study
 
+    operating = 4500,
     dr=0.075,
     lifetime=25, # technical is >20, economic is =20
     celc=40,
@@ -127,6 +121,11 @@ def regret_BECCS(
     cmea=29,    #SEK/kgmea (Ramboll)
     coc=500,    #EUR/tOC Magnus/Felicia
 
+    cAM=1,      #Increased capex compared to baseline?
+    cFR=1,
+    cycl=1,
+    cASU=1,
+
     EPC=0.175,
     contingency_process=0.05,
     contingency_clc=0.40,
@@ -136,19 +135,21 @@ def regret_BECCS(
     #Levers:
     decision = "amine", # ["ref", "amine","oxy","clc"],
     rate = 0.90, # "high rates needed" (Ramboll Design), so maybe 86-94%?
-    operating = 4500,
     operating_increase = 600, # [0, 600, 1200],
     timing = 10, # [5, 10, 15, 20] represents when C&L+amines+ASUs are built, and T&S are paid for, and revenues gained!
 
 ):
-    # Determining reference case energy balance
-    # print("Maybe remove estimate_nominal_cycle() if it is irrelevant")
-    Qfuel, Qcond, Qfgc, Qnet, P, states = estimate_nominal_cycle(Qnet, P, Qfuel, LHV, psteam, Tsteam, isentropic)
+    LHV = 10.44
+    Qfuel = 174.5
+    Pnet = 48.3
+    Qfgc = 33.3
+    Qcond = 106.6
+    Qnet = Qcond + Qfgc
+
     mfuel = Qfuel/LHV           #[kgf/s]
     memitted = 1.1024 * mfuel   #[kgCO2/s]
     mcaptured = 0
-    Pparasitic = 6.4
-    REF = ConversionTech("ref", Qfuel, Qnet, P-Pparasitic, memitted, mcaptured, operating)
+    REF = ConversionTech("ref", Qfuel, Qnet, Pnet, memitted, mcaptured, operating)
 
     # Determining amine case (with HR) energy balance
     mfluegas = 5.044 * mfuel    #[kg/s]
@@ -156,13 +157,18 @@ def regret_BECCS(
 
     mcaptured = memitted * rate #[kgCO2/s]
     memitted = memitted * (1-rate)
-    Qreb = 2.24 * mcaptured     #[MW]
 
-    Pnet = 31.8/37.1 * Qreb 
-    Qcond = 73.7/37.1 * Qreb
-    Qrec = (11+21.7)/37.1 * Qreb
-    Qnet = Qcond + Qrec + Qfgc
+    Ploss_ref = 48.3-31.8       #These are valid for exactly 16.6kgCO2/s, scale them! Check heat balances!
+    Qloss_ref = 106.6-73.7
+    Pnet -= Ploss_ref/16.6 * mcaptured
+    Qcond -= Qloss_ref/16.6 * mcaptured
+    Qrec = (11+21.7)/16.6 * mcaptured
+    Qnet = Qcond + Qfgc +Qrec        #Qfgc is not scaled - it is constant
     AMINE = ConversionTech("amine", Qfuel, Qnet, Pnet, memitted, mcaptured, operating+operating_increase)
+
+    # Determining C&L balances based on AMINE Ramboll case (although this is already accounted for in the amine balance!)
+    Wcompr = 3.5/16.6 * mcaptured #[MW/kgCO2/s * kgCO2/s]
+    Qcool  = 3.6/16.6 * mcaptured #[MW/kgCO2/s * kgCO2/s]
 
     # Determining CLC energy balance
     O2demand = 0.024045 * mfuel #[kmolO2/s]
@@ -175,7 +181,7 @@ def regret_BECCS(
     Qar = dHox * O2oc           #[MW]
     Qfr = dHred * O2oc
     Qoxy = LHVO2 * O2oxy
-    print("CLC heat summarizes to: ", sum([Qar, Qfr, Qoxy]) - Qfuel)
+    # print("CLC heat summarizes to: ", sum([Qar, Qfr, Qoxy]) - Qfuel)
 
     mCO2 = 1.1024 * mfuel               #[kgCO2/s]
     mH2O = 0.7416 * mfuel               #[kgH2O/s]
@@ -184,7 +190,7 @@ def regret_BECCS(
  
     P = REF.P
     Pasu = Wasu/1000*O2oxy*32           #[MW] 
-    Pnet = P - Pasu
+    Pnet = P - Pasu - Wcompr - Qcool
     mcaptured = mCO2 * rate             #[kgCO2/s], assuming some CO2 is just vented...
     memitted = mCO2 * (1-rate)
 
@@ -195,36 +201,35 @@ def regret_BECCS(
     CLC.mfluegas = mfluegas
 
     # Determining oxyfuel energy balance
-    # print("Currently not accounting for reduced oxyfuel-boiler size")
     P = REF.P
-    Pasu = Wasu/1000*O2demand*32        #[MW] 
-    Pnet = P - Pasu
+    Pasu = Wasu/1000*O2demand*32        #[MW], Macroscopic? Or from Anders maybe?
+    Pnet = P - Pasu - Wcompr - Qcool
     mcaptured = mCO2 * rate             #[kgCO2/s], assuming some CO2 is just vented...
     memitted = mCO2 * (1-rate)
     OXY = ConversionTech("oxy", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating+operating_increase)
 
-    # Determining C&L balances
-    Wcompr = 13.17/37.31 * mcaptured #[MW/kgCO2/s * kgCO2/s] Deng's massflow and work
-    Qcool  = 43.30/37.31 * mcaptured #[MW/kgCO2/s * kgCO2/s]
+    # for tech in [REF,AMINE,OXY,CLC]:
+    #     tech.print()
+    #     print("Energy balances do not sum to 0, Ramboll's study is strange?")
 
     ### -------------- NEW SECTION ON COSTS AND NPV ------------- ###
     # Calculating CAPEX per item [MEUR]:
     REF.shopping_list = {
     }
     AMINE.shopping_list = {
-        'amines' : (2000*sek * AMINE.mcaptured/16.6), # assuming a linear relationship between mcaptured and CAPEX... Let's remove the CL capex cost:
+        'amines' : cAM* (2000*sek * AMINE.mcaptured/16.6), # assuming a linear relationship between mcaptured and CAPEX... Let's remove the CL capex cost:
     }
     CLC.shopping_list = {
-        'FR' : (4.98*(Afr/1531)**0.6)*usd * CEPCI/585.7 *1.4, 
-        'cyclone' : 0.345*( 3 )*usd * CEPCI/576.1 *1.4, 
+        'FR' : cFR* (4.98*(Afr/1531)**0.6)*usd * CEPCI/585.7 *1.4, 
+        'cyclone' : cycl * 0.345*( 3 )*usd * CEPCI/576.1 *1.4, 
         'POC' : ( 48.67*10**-6*(CLC.mfluegas) * (1 + np.exp(0.018*(850+273.15)-26.4)) * 1/(0.995-0.98) )*usd * CEPCI/585.7 *1.3,
-        'ASU' : ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6 *1.3,
+        'ASU' : cASU * ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6 *1.3,
         'OCash' : (4.6*(mash/6.7)**0.56)*usd * CEPCI/603.1 *1.2,
         'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  #Assuming that Deng had cost year = 2019 NOTE: unclear if installation 1.3 should be included or not?
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2, #Function from Judit, 4000m3 from Ramboll, CEPCI from Google
     }
     OXY.shopping_list = {
-        'ASU' : ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2demand*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6 *1.3,
+        'ASU' : cASU * ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2demand*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6 *1.3,
         'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2,  
     }
@@ -252,8 +257,6 @@ def regret_BECCS(
     TOC = TPC*(1 + ownercost)
     TCR = 1.154*TOC #Check Macroscopic ref
     OXY.CAPEX = TCR
-
-    TECHS = [REF,AMINE,CLC,OXY]
 
     # Calculating NPV regret
     def calculate_NPV(TECH):

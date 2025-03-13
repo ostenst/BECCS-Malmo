@@ -305,23 +305,22 @@ def regret_BECCS(
     regret_values = {tech.name: calculate_regret(tech.name, npv_values) for tech in TECHS}
 
     results = {
-        "regret_decision" : regret_values[decision],
-        "amine_capex" : AMINE.CAPEX,
-        "clc_capex" : CLC.CAPEX,
-        "oxy_capex" : OXY.CAPEX,
-        "ref_capex" : 0,
-        }
+        "regret" : regret_values[decision], 
+        "regret_ref": regret_values["ref"],
+        "regret_amine": regret_values["amine"],
+        "regret_clc": regret_values["clc"],
+        "regret_oxy": regret_values["oxy"], 
+        # "regret_decision" : regret_values[decision],       
+        # "amine_capex": AMINE.CAPEX,
+        # "clc_capex": CLC.CAPEX,
+        # "oxy_capex": OXY.CAPEX,
+        # "ref_capex": 0,
+    }
 
     return results
 
 
 if __name__ == "__main__":
 
-    # aspen_df = pd.read_csv("amine.csv", sep=";", decimal=',')
-    # aspen_interpolators = create_interpolators(aspen_df)
-
     dict = regret_BECCS()
-    print("I regret my decision this much in terms of NPV [MEUR]:\n", dict["regret_decision"])
-
-    print("I need to sync this with Fredrik before continuing! To follow the RDM framing phase")
-    print("To do that, I need to draw my different cases in detail - showcasing what is _the same_ between each cases")
+    print("I regret my amine decision this much in terms of NPV [MEUR]:\n", dict["amine"])

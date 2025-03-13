@@ -57,11 +57,11 @@ model.levers = [
 ]
 
 model.outcomes = [
-    ScalarOutcome("regret_decision", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("amine_capex", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("clc_capex", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("oxy_capex", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("ref_capex", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("regret", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("regret_ref", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("regret_amine", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("regret_oxy", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("regret_clc", ScalarOutcome.MINIMIZE),
 ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
@@ -75,8 +75,8 @@ outcomes_df = pd.DataFrame(outcomes)
 outcomes_df["decision"] = experiments["decision"]
 print(outcomes_df.head())
 
-zero_regret_counts = outcomes_df[outcomes_df["regret_decision"] == 0].groupby("decision")["regret_decision"].count()
-print(zero_regret_counts)
+# zero_regret_counts = outcomes_df[outcomes_df["regret_decision"] == 0].groupby("decision")["regret_decision"].count()
+# print(zero_regret_counts)
 
 experiments.to_csv("experiments.csv", index=False)
 outcomes_df.to_csv("outcomes.csv", index=False)

@@ -47,6 +47,11 @@ model.uncertainties = [
     RealParameter("contingency_clc", 0.30, 0.50),
     RealParameter("contingency_project", 0.15, 0.25),
     RealParameter("ownercost", 0.15, 0.25),
+
+    CategoricalParameter("Bioshortage", [True, False]),
+    CategoricalParameter("Powersurge", [True, False]),
+    CategoricalParameter("Invasion", [True, False]),
+    CategoricalParameter("Auction", [True, False]),
 ]
 
 model.levers = [
@@ -65,33 +70,53 @@ model.outcomes = [
 ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
-n_scenarios = 33
-n_policies = 30
+n_scenarios = 100
+n_policies = 40
 
 results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.LHS, lever_sampling = Samplers.LHS)
 experiments, outcomes = results
 
 outcomes_df = pd.DataFrame(outcomes)
+experiments.to_csv("experiments.csv", index=False)
+outcomes_df.to_csv("outcomes.csv", index=False)
 outcomes_df["decision"] = experiments["decision"]
 print(outcomes_df.head())
 
 # zero_regret_counts = outcomes_df[outcomes_df["regret_decision"] == 0].groupby("decision")["regret_decision"].count()
 # print(zero_regret_counts)
 
-experiments.to_csv("experiments.csv", index=False)
-outcomes_df.to_csv("outcomes.csv", index=False)
+plt.figure(figsize=(8, 4))
+sns.boxplot(x="decision", y=outcomes_df["regret"], data=outcomes_df)
+plt.title(f"Regret (based on NPV in [MEUR]) by technology decision (circle=outlier)")
 
+# Creating 8 bar plots for regret_ref based on combinations of Bioshortage, Powersurge, Invasion, and Auction
+fig, axes = plt.subplots(2, 4, figsize=(16, 8), sharey=True)
 
-# plt.figure(figsize=(8, 4))
-# sns.boxplot(x="decision", y=outcomes_df["regret_decision"], data=outcomes_df)
-# plt.title(f"Regret (based on NPV in [MEUR]) by technology decision (circle=outlier)")
+# Define scenarios
+scenarios = [
+    (False, False, False, False),
+    (False, False, False, True),
+    (False, False, True, False),
+    (False, False, True, True),
+    (True, False, False, False),
+    (True, False, False, True),
+    (True, False, True, False),
+    (True, False, True, True),
+]
 
-# # Boxplot for all outcomes (each outcome on x-axis)
-# plt.figure(figsize=(8, 5))
-# melted_df = outcomes_df.drop(columns=["decision", "regret_decision"]).melt(var_name="Outcome", value_name="Value")
-# sns.boxplot(x="Outcome", y="Value", data=melted_df)
-# plt.xticks(rotation=45, ha="right")  # Rotate x-axis labels for better readability
-# plt.title("Distribution of CAPEX per technology decision")
-# plt.ylabel("CAPEX [MEUR]")
-# plt.xlabel("Outcomes")
-# plt.show()
+# Loop through each scenario and plot
+for ax, (bio, power, inv, auc) in zip(axes.flatten(), scenarios):
+    subset = outcomes_df[
+        (experiments["Bioshortage"] == bio) &
+        (experiments["Powersurge"] == power) &
+        (experiments["Invasion"] == inv) &
+        (experiments["Auction"] == auc)
+    ]
+    
+    sns.barplot(x=subset["decision"], y=subset["regret"], ax=ax)
+    ax.set_title(f"B:{bio}, P:{power}, I:{inv}, A:{auc}")
+    ax.set_xlabel("Decision")
+    ax.set_ylabel("Regret")
+
+plt.tight_layout()
+plt.show()

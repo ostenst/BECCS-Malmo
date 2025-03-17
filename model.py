@@ -306,6 +306,7 @@ def regret_BECCS(
     #         NPV += (revenues-costs) / (1+dr)**t
 
     #     return NPV
+    
     def calculate_NPV(TECH, cbio, celc):
         analysis_period = timing + lifetime  # Example: invest after 5, lifetime of 25 => 30 years
 
@@ -390,4 +391,5 @@ def regret_BECCS(
 if __name__ == "__main__":
 
     dict = regret_BECCS()
+    print(" TEST THE CONTROLLER AND IMPLEMENT THE 4 SHOCKS ")
     print("I regret my amine decision this much in terms of NPV [MEUR]:\n", dict["regret_amine"])

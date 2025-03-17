@@ -132,6 +132,18 @@ def regret_BECCS(
     contingency_project=0.20,
     ownercost=0.20,
 
+    # Scenarios (all default to False):
+    Bioshortage = False,  # True if biomass price increases by 15% per year
+    Powersurge = False,   # True if electricity price increases by 20% per year
+    Invasion = False,     # True if no CO2 is captured or stored after CCS investment
+    Auction = False,      # True if additional revenue from CRC is added
+    Integration = False,  # True if the option to sell CRCs at the fossil ETS price is added
+    Fossilized = False,   # True if CO2 emissions require purchased ETS allowances
+    Toxic = False,        # True if the amine capture unit becomes stranded after 5 years
+    Experimental = False, # True if chemical-looping CAPEX is multiplied by 4
+    Hydrogen = False,     # True if air separation units have zero costs
+    Monostorage = False,   # True if storage prices are multiplied by 4
+
     #Levers:
     decision = "amine", # ["ref", "amine","oxy","clc"],
     rate = 0.90, # "high rates needed" (Ramboll Design), so maybe 86-94%?
@@ -258,40 +270,89 @@ def regret_BECCS(
     TCR = 1.154*TOC #Check Macroscopic ref
     OXY.CAPEX = TCR
 
-    # Calculating NPV regret
-    def calculate_NPV(TECH):
-        analysis_period = timing + lifetime # Example: invest after 5, lifetime of 25 => 30 years
+    # # Calculating NPV regret
+    # def calculate_NPV(TECH):
+    #     analysis_period = timing + lifetime # Example: invest after 5, lifetime of 25 => 30 years
+
+    #     invested = False
+    #     NPV = 0
+    #     for t in range(1, analysis_period):
+
+    #         # Adding CAPEX
+    #         costs = 0
+    #         revenues = 0
+    #         if (t==1 or t==2) and TECH.CAPEX_initial is not None:
+    #             costs += TECH.CAPEX_initial/2 #[MEUR] Assuming 50% of CAPEX for 2 construction years
+
+    #         if t==timing or t==timing+1:
+    #             invested = True # Implies the energy balance (Qdh, Pel, Qfuel) has changed, incl. (C&L and ASU) and that T&S is operated
+    #             costs += TECH.CAPEX/2 #[MEUR]
+
+    #         # Adding OPEX and revenues
+    #         if t>timing+1 and invested:
+    #             costs += TECH.Qfuel * TECH.operating * cbio *10**-6 #[MEUR/yr]
+    #             costs += TECH.mcaptured/1000*3600 * TECH.operating * (ctrans + cstore) *10**-6 
+    #             if TECH.name=="amine":
+    #                 costs += cmea*sek *1.5 *TECH.mcaptured/1000*3600 * TECH.operating *10**-6 #1.5 from Ramboll
+    #             if TECH.name=="clc":
+    #                 costs += 1/1000 *TECH.Qfuel* TECH.operating* coc *10**-6 #1kgOC/MWhbr from Magnus
+                
+    #             revenues += ( TECH.Qnet*(cheat*celc) + TECH.P*celc )*TECH.operating *10**-6 #[MEUR/yr]
+    #             revenues += TECH.mcaptured/1000*3600 * TECH.operating * crc *10**-6
+    #         else:
+    #             costs += REF.Qfuel * REF.operating * cbio *10**-6 
+    #             revenues += ( REF.Qnet*(cheat*celc) + REF.P*celc )*REF.operating *10**-6 #[MEUR/yr]
+            
+    #         NPV += (revenues-costs) / (1+dr)**t
+
+    #     return NPV
+    def calculate_NPV(TECH, cbio, celc):
+        analysis_period = timing + lifetime  # Example: invest after 5, lifetime of 25 => 30 years
 
         invested = False
         NPV = 0
+        
         for t in range(1, analysis_period):
+    
+            if Bioshortage and t < 11:
+                cbio *= 1.10
+            if Powersurge and t < 4:
+                celc *= 1.20
 
             # Adding CAPEX
             costs = 0
             revenues = 0
-            if (t==1 or t==2) and TECH.CAPEX_initial is not None:
-                costs += TECH.CAPEX_initial/2 #[MEUR] Assuming 50% of CAPEX for 2 construction years
+            if (t == 1 or t == 2) and TECH.CAPEX_initial is not None:
+                costs += TECH.CAPEX_initial / 2  # [MEUR] Assuming 50% of CAPEX for 2 construction years
 
-            if t==timing or t==timing+1:
-                invested = True # Implies the energy balance (Qdh, Pel, Qfuel) has changed, incl. (C&L and ASU) and that T&S is operated
-                costs += TECH.CAPEX/2 #[MEUR]
+            if t == timing or t == timing + 1:
+                invested = True  # Implies the energy balance (Qdh, Pel, Qfuel) has changed, incl. (C&L and ASU) and that T&S is operated
+                costs += TECH.CAPEX / 2  # [MEUR]
 
             # Adding OPEX and revenues
-            if t>timing+1 and invested:
-                costs += TECH.Qfuel * TECH.operating * cbio *10**-6 #[MEUR/yr]
-                costs += TECH.mcaptured/1000*3600 * TECH.operating * (ctrans + cstore) *10**-6 
-                if TECH.name=="amine":
-                    costs += cmea*sek *1.5 *TECH.mcaptured/1000*3600 * TECH.operating *10**-6 #1.5 from Ramboll
-                if TECH.name=="clc":
-                    costs += 1/1000 *TECH.Qfuel* TECH.operating* coc *10**-6 #1kgOC/MWhbr from Magnus
-                
-                revenues += ( TECH.Qnet*(cheat*celc) + TECH.P*celc )*TECH.operating *10**-6 #[MEUR/yr]
-                revenues += TECH.mcaptured/1000*3600 * TECH.operating * crc *10**-6
+            if t > timing + 1 and invested and not Invasion:
+
+                # Calculate operational costs and revenues
+                costs += TECH.Qfuel * TECH.operating * cbio * 10**-6  # Biomass fuel costs
+                revenues += (TECH.Qnet * (cheat * celc) + TECH.P * celc) * TECH.operating * 10**-6  # Revenue from CHP
+
+                costs += TECH.mcaptured / 1000 * 3600 * TECH.operating * (ctrans + cstore) * 10**-6  # Capture and storage costs
+                if Auction and t < timing+15+2: #Add two years for the capital delay before operations
+                    revenues += TECH.mcaptured / 1000 * 3600 * TECH.operating * (crc+160) * 10**-6  # Revenue from CO2 capture credits
+                else:
+                    revenues += TECH.mcaptured / 1000 * 3600 * TECH.operating * crc * 10**-6  # Revenue from CO2 capture credits
+
+                if TECH.name == "amine":
+                    costs += cmea * sek * 1.5 * TECH.mcaptured / 1000 * 3600 * TECH.operating * 10**-6  # Additional costs for amine capture
+                if TECH.name == "clc":
+                    costs += 1 / 1000 * TECH.Qfuel * TECH.operating * coc * 10**-6  # Additional costs for chemical-looping
+
             else:
-                costs += REF.Qfuel * REF.operating * cbio *10**-6 
-                revenues += ( REF.Qnet*(cheat*celc) + REF.P*celc )*REF.operating *10**-6 #[MEUR/yr]
-            
-            NPV += (revenues-costs) / (1+dr)**t
+                costs += REF.Qfuel * REF.operating * cbio * 10**-6  # Reference fuel costs
+                revenues += (REF.Qnet * (cheat * celc) + REF.P * celc) * REF.operating * 10**-6  # Reference revenue
+
+            # Add to NPV calculation
+            NPV += (revenues - costs) / (1 + dr) ** t
 
         return NPV
 
@@ -301,7 +362,13 @@ def regret_BECCS(
         return regret
 
     TECHS = [REF, AMINE, CLC, OXY]
-    npv_values = {tech.name: calculate_NPV(tech) for tech in TECHS}
+    npv_values = {}
+    for tech in TECHS:
+        # Reset cbio and celc before each call to calculate_NPV
+        initial_cbio = cbio
+        initial_celc = celc
+        npv_values[tech.name] = calculate_NPV(tech, initial_cbio, initial_celc)
+
     regret_values = {tech.name: calculate_regret(tech.name, npv_values) for tech in TECHS}
 
     results = {
@@ -323,4 +390,4 @@ def regret_BECCS(
 if __name__ == "__main__":
 
     dict = regret_BECCS()
-    print("I regret my amine decision this much in terms of NPV [MEUR]:\n", dict["amine"])
+    print("I regret my amine decision this much in terms of NPV [MEUR]:\n", dict["regret_amine"])

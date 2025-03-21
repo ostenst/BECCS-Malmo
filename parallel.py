@@ -25,12 +25,12 @@ data_scaled = pd.concat([categorical_scaled, outcomes[["regret_ref_scaled"]]], a
 # Define colormap and specific colors
 USE_COLORMAP = False  # Set to False to use predefined colors instead of colormap
 viridis = cm.get_cmap('viridis')
-decision_colors = {
-    "ref": viridis(0.0),
-    "amine": viridis(0.33),
-    "clc": viridis(0.66),
-    "oxy": viridis(1.0),
-}
+# decision_colors = {
+#     "ref": viridis(0.0),
+#     "amine": viridis(0.33),
+#     "clc": viridis(0.66),
+#     "oxy": viridis(1.0),
+# }
 def get_color(row):
     if USE_COLORMAP:
         color_value = row["regret_ref_scaled"]  # Use regret_ref for color mapping

@@ -115,7 +115,7 @@ def regret_BECCS(
     CEPCI=800, 
     sek=0.089,
     usd=0.96,
-    ctrans=50,
+    ctrans=600,
     cstore=30,
     crc=100,
     cmea=29,    #SEK/kgmea (Ramboll)
@@ -135,7 +135,6 @@ def regret_BECCS(
     # Scenarios (all default to False):
     Bioshortage = False,  # True if biomass price increases by 15% per year
     Powersurge = False,   # True if electricity price increases by 20% per year
-    Invasion = False,     # True if no CO2 is captured or stored after CCS investment
     Auction = False,      # True if additional revenue from CRC is added
     Integration = False,  # True if the option to sell CRCs at the fossil ETS price is added
     Fossilized = False,   # True if CO2 emissions require purchased ETS allowances
@@ -151,6 +150,7 @@ def regret_BECCS(
     timing = 10, # [5, 10, 15, 20] represents when C&L+amines+ASUs are built, and T&S are paid for, and revenues gained!
 
 ):
+    Invasion = False
     LHV = 10.44
     Qfuel = 174.5
     Pnet = 48.3
@@ -291,7 +291,7 @@ def regret_BECCS(
     #         # Adding OPEX and revenues
     #         if t>timing+1 and invested:
     #             costs += TECH.Qfuel * TECH.operating * cbio *10**-6 #[MEUR/yr]
-    #             costs += TECH.mcaptured/1000*3600 * TECH.operating * (ctrans + cstore) *10**-6 
+    #             costs += TECH.mcaptured/1000*3600 * TECH.operating * (ctrans*sek + cstore) *10**-6 
     #             if TECH.name=="amine":
     #                 costs += cmea*sek *1.5 *TECH.mcaptured/1000*3600 * TECH.operating *10**-6 #1.5 from Ramboll
     #             if TECH.name=="clc":
@@ -337,7 +337,7 @@ def regret_BECCS(
                 costs += TECH.Qfuel * TECH.operating * cbio * 10**-6  # Biomass fuel costs
                 revenues += (TECH.Qnet * (cheat * celc) + TECH.P * celc) * TECH.operating * 10**-6  # Revenue from CHP
 
-                costs += TECH.mcaptured / 1000 * 3600 * TECH.operating * (ctrans + cstore) * 10**-6  # Capture and storage costs
+                costs += TECH.mcaptured / 1000 * 3600 * TECH.operating * (ctrans*sek + cstore) * 10**-6  # Capture and storage costs
                 if Auction and t < timing+15+2: #Add two years for the capital delay before operations
                     revenues += TECH.mcaptured / 1000 * 3600 * TECH.operating * (crc+160) * 10**-6  # Revenue from CO2 capture credits
                 else:

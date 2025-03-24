@@ -74,19 +74,44 @@ ema_logging.log_to_stderr(ema_logging.INFO)
 n_scenarios = 1000
 n_policies = 500
 
-# Regular LHS sampling:
-results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.LHS, lever_sampling = Samplers.LHS)
+# If Sobol sampling:
+print(" NOTE : Should probably adapt this to also include some levers!")
+results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.SOBOL, lever_sampling = Samplers.SOBOL)
 experiments, outcomes = results
+def analyze(results, ooi):
+    """analyze results using SALib sobol, returns a dataframe"""
+    _, outcomes = results
 
-outcomes_df = pd.DataFrame(outcomes)
-experiments.to_csv("experiments.csv", index=False)
-outcomes_df.to_csv("outcomes.csv", index=False)
-outcomes_df["decision"] = experiments["decision"]
-print(outcomes_df)
+    problem = get_SALib_problem(model.uncertainties)
+    y = outcomes[ooi]
+    sobol_indices = sobol.analyze(problem, y)
+    sobol_stats = {key: sobol_indices[key] for key in ["ST", "ST_conf", "S1", "S1_conf"]}
+    sobol_stats = pd.DataFrame(sobol_stats, index=problem["names"])
+    sobol_stats.sort_values(by="ST", ascending=False)
+    s2 = pd.DataFrame(sobol_indices["S2"], index=problem["names"], columns=problem["names"])
+    s2_conf = pd.DataFrame(
+        sobol_indices["S2_conf"], index=problem["names"], columns=problem["names"]
+    )
+    return sobol_stats, s2, s2_conf, problem
+sobol_stats, s2, s2_conf, problem = analyze(results, "regret")
+print(sobol_stats)
+print(s2)
+print(s2_conf)
+sobol_stats = pd.DataFrame(sobol_stats, index=problem["names"])
+sobol_stats.to_csv("sobol_stats.csv")
+sobol_stats_sorted = sobol_stats.sort_values(by="ST", ascending=False)  # Ascending for better readability
 
-zero_regret_counts = outcomes_df[outcomes_df["regret"] == 0].groupby("decision")["regret"].count()
-print(zero_regret_counts)
-
-# sns.pairplot(outcomes_df, hue="decision", vars=list(outcomes.keys())) # This plots ALL outcomes
-# #  sns.pairplot(df_outcomes, hue="heat_pump", vars=["capture_cost","penalty_services","penalty_biomass"])
-# plt.show()
+# Create horizontal bar plot
+plt.figure(figsize=(8, 10))  # Adjust figure size for better layout
+sns.barplot(
+    y=sobol_stats_sorted.index,  # Parameters on y-axis
+    x=sobol_stats_sorted["ST"],  # Sobol indices on x-axis
+    xerr=sobol_stats_sorted["ST_conf"],  # Confidence intervals as error bars
+    capsize=0.2,
+    color="crimson"
+)
+plt.ylabel("Parameter")
+plt.xlabel("Total Sobol Index (ST)")
+plt.title("Total-Order Sobol Indices with Confidence Intervals")
+plt.grid(axis="x", linestyle="--", alpha=0.7)
+plt.show()

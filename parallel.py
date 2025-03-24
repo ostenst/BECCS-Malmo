@@ -7,68 +7,92 @@ from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 experiments = pd.read_csv("experiments.csv")
 outcomes = pd.read_csv("outcomes.csv")
 
-outcomes = outcomes.loc[experiments.index]
-outcomes['decision'] = experiments['decision']
+# Sampling just some of the data for faster plotting
+sample_fraction = 0.005  # Adjust as needed
+sampled_indices = experiments.sample(frac=sample_fraction, random_state=42).index
+experiments = experiments.loc[sampled_indices]
+outcomes = outcomes.loc[sampled_indices]
 
-# Normalize numerical columns
+# Hardcoded columns for plotting
+experiment_columns = ["crc", "cbio", "Auction"]
+outcome_columns = ["regret_ref","regret_amine","regret_oxy","regret_clc"]
+
+# Combine selected columns
+df = pd.concat([experiments[experiment_columns], outcomes[outcome_columns]], axis=1).reset_index(drop=True)
+
+# Normalize numerical columns & encode categorical/boolean features
 scaler = MinMaxScaler()
-if 'regret_ref' in outcomes.columns:
-    outcomes["regret_ref_scaled"] = scaler.fit_transform(outcomes[["regret_ref"]])
+label_encoders = {}
 
-categorical_columns = ['decision', 'operating_increase']
-label_encoder = LabelEncoder()
-categorical_data = experiments[categorical_columns].apply(label_encoder.fit_transform)
-categorical_scaled = pd.DataFrame(scaler.fit_transform(categorical_data), columns=categorical_columns)
+for col in df.columns:
+    if df[col].dtype == 'object' or df[col].dtype == 'bool':  # Encode categorical and boolean columns
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col])
+        label_encoders[col] = le
+    else:  # Normalize numerical columns
+        df[col] = scaler.fit_transform(df[[col]])
 
-data_scaled = pd.concat([categorical_scaled, outcomes[["regret_ref_scaled"]]], axis=1)
+# Set up parallel coordinates plot
+num_features = len(df.columns)
+x_ticks = np.arange(num_features)  # X-axis positions for features
+fig, ax = plt.subplots(figsize=(12, 6))
 
-# Define colormap and specific colors
-USE_COLORMAP = False  # Set to False to use predefined colors instead of colormap
-viridis = cm.get_cmap('viridis')
-# decision_colors = {
-#     "ref": viridis(0.0),
-#     "amine": viridis(0.33),
-#     "clc": viridis(0.66),
-#     "oxy": viridis(1.0),
-# }
-def get_color(row):
-    if USE_COLORMAP:
-        color_value = row["regret_ref_scaled"]  # Use regret_ref for color mapping
-        return viridis(color_value), 0.8  # Higher alpha for better visibility
-    else:
-        if row['regret_ref'] != 0:
-            return "red", 0.8
-        else:
-            return "grey", 0.4
+# Color by 'Auction' categorical feature
+auction_colors = cm.viridis(df["Auction"].values / df["Auction"].max())  # Normalize for colormap
 
-        # return decision_colors.get(row['decision'], "grey"), 0.8  # Default color is grey
+# Draw parallel coordinate lines
+for i in range(len(df)):
+    y_values = df.iloc[i].values  # Get row values
+    ax.plot(x_ticks, y_values, color=auction_colors[i], alpha=0.5)
 
-colors = outcomes.apply(get_color, axis=1)
+# Configure plot aesthetics
+ax.set_xticks(x_ticks)
+ax.set_xticklabels(df.columns, rotation=45)
+ax.set_xlabel("Features and Outcomes")
+ax.set_ylabel("Normalized Values")
+ax.set_title("Custom Parallel Coordinates Plot Colored by Auction")
+ax.grid(axis="y", linestyle="--", alpha=0.5)
 
-# Set up plot
-fig, ax = plt.subplots(figsize=(8, 5))
-for i, row in data_scaled.iterrows():
-    ax.plot(data_scaled.columns, row, color=colors[i][0], alpha=colors[i][1])
+# Create color legend for 'Auction'
+unique_auctions = sorted(df["Auction"].unique())
+legend_colors = [cm.viridis(a / df["Auction"].max()) for a in unique_auctions]
+auction_labels = label_encoders["Auction"].inverse_transform(unique_auctions)
 
-# Add colorbar if using colormap
-if USE_COLORMAP:
-    sm = plt.cm.ScalarMappable(cmap=viridis, norm=plt.Normalize(vmin=outcomes["regret_ref"].min(), vmax=outcomes["regret_ref"].max()))
-    cbar = plt.colorbar(sm, ax=ax)
-    cbar.set_label("Regret (REF)")
+for color, label in zip(legend_colors, auction_labels):
+    ax.plot([], [], color=color, label=label, linewidth=4)
 
-# Add legend for decision-based colors if colormap is not used
-if not USE_COLORMAP:
-    legend_patches = [plt.Line2D([0], [0], color=color, lw=4, label=label) for label, color in decision_colors.items()]
-    ax.legend(handles=legend_patches, title="Decision")
+ax.legend(title="Auction", bbox_to_anchor=(1.05, 1), loc="upper left")
 
-# Set x-axis labels
-ax.set_xticks(range(len(data_scaled.columns)))
-ax.set_xticklabels(data_scaled.columns, rotation=45)
+# ======== Scatter Plot: regret_ref vs. crc ======== #
+fig, ax2 = plt.subplots(figsize=(6, 6))
 
-# Remove black box (spines)
-for spine in ax.spines.values():
-    spine.set_visible(False)
+# Get original (unnormalized) values for 'Auction', 'crc', and 'regret_ref'
+df_original = pd.concat([experiments[["crc", "Auction"]], outcomes[["regret_ref"]]], axis=1)
 
-ax.set_title("Parallel Coordinates Plot for CHP Outcomes")
+# Separate rows where Auction is True or False
+df_true = df_original[df_original["Auction"] == True]
+df_false = df_original[df_original["Auction"] == False]
 
+# Scatter plot
+ax2.scatter(df_true["crc"], df_true["regret_ref"], color="blue", alpha=0.6, label="Auction = True")
+ax2.scatter(df_false["crc"], df_false["regret_ref"], color="red", alpha=0.6, label="Auction = False")
+
+# Compute frequency of regret_ref == 0 at each crc level
+freq_counts = df_original[df_original["regret_ref"] == 0].groupby("crc").size()
+
+# Normalize frequency to match y-axis scale
+if not freq_counts.empty:
+    freq_scaled = freq_counts / freq_counts.max() * df_original["regret_ref"].max()
+
+    # Plot frequency as a line
+    ax2.plot(freq_counts.index, freq_scaled, color="black", linestyle="--", marker="o", label="Freq of regret_ref = 0")
+
+# Configure scatter plot aesthetics
+ax2.set_xlabel("crc")
+ax2.set_ylabel("regret_ref")
+ax2.set_title("Scatter Plot: regret_ref vs. crc (Auction Groups) + Frequency of regret_ref=0")
+ax2.legend()
+ax2.grid(True, linestyle="--", alpha=0.5)
+
+# Show plot
 plt.show()

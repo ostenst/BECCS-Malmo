@@ -142,7 +142,7 @@ if __name__ == "__main__":
     print(outcomes.head())
 
     # Let's filter the data based on the decision of interest
-    experiments, outcomes = filter_by_decision(experiments, outcomes, decision_values=["ref"])
+    experiments, outcomes = filter_by_decision(experiments, outcomes, decision_values=["clc"])
     results = (experiments, outcomes)
 
     regret_zero = (outcomes["regret"] == 0).sum()

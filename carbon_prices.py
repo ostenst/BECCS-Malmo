@@ -16,24 +16,36 @@ low_scenario_extended = np.full_like(future_years_extended, last_price)  # Const
 mid_scenario_extended = last_price + 5 * (future_years_extended - 2025)  # +5 €/year
 high_scenario_extended = last_price + 10 * (future_years_extended - 2025)  # +10 €/year
 
-# Plot
-plt.figure(figsize=(10, 5))
-plt.plot(years, prices, 'ko-', label="Historical ETS prices (fossil)", markersize=5)  # Black line for historical data
-plt.plot(future_years_extended, low_scenario_extended, 'k--', label="Low (+0 €/yr)")  # Red dashed line
-plt.plot(future_years_extended, mid_scenario_extended, 'k--', label="Middle (+5 €/yr)")  # Red dashed line
-plt.plot(future_years_extended, high_scenario_extended, 'k--', label="High (+10 €/yr)")  # Red dashed line
+# Set seaborn style but override the background
+plt.style.use("bmh")
+
+# Create figure and axis
+fig, ax = plt.subplots(figsize=(10, 5), facecolor="white")  # Ensure figure background is white
+ax.set_facecolor("white")  # Ensure the plot area is also white
+
+# Plot data
+plt.plot(years, prices, 'ko-', label="Historical ETS prices (fossil)", markersize=5)  
+plt.plot(future_years_extended, low_scenario_extended, 'k--', label="Low (+0 €/yr)")  
+plt.plot(future_years_extended, mid_scenario_extended, 'k--', label="Middle (+5 €/yr)")  
+plt.plot(future_years_extended, high_scenario_extended, 'k--', label="High (+10 €/yr)")  
 
 # Add constant green lines at 50 €/t and 300 €/t
-plt.axhline(y=50, color='g', linestyle='-', label="CRC lower bound (€50/t)")
-plt.axhline(y=300, color='g', linestyle='-', label="CRC upper bound (€300/t)")
+plt.axhline(y=50, color='mediumseagreen', linestyle='-', linewidth=1, label="CRC lower bound (€50/t)")
+plt.axhline(y=300, color='mediumseagreen', linestyle='-', linewidth=1, label="CRC upper bound (€300/t)")
 
-# Add a purple line for "Auction subsidy Stockholm Exergi" starting in 2028
-plt.plot([2028, 2043], [160, 160], 'm-', linewidth=2, label="Auction subsidy Stockholm Exergi (€160/t)")
+# Add a subsidy line for Stockholm Exergi
+plt.plot([2028, 2043], [160, 160], color='crimson', linestyle='-', linewidth=1, label="Auction subsidy Stockholm Exergi (€160/t)")
 
-# Labels and legend
+# Labels and title
 plt.xlabel("Year")
 plt.ylabel("Carbon prices (€/ton CO₂)")
 plt.title("Alternative Carbon Prices and Future Scenarios (Extended to 2060)")
+
+# Ensure grid lines are visible
+plt.grid(True, color='gray', linestyle='--', linewidth=0.5, alpha=0.7)  
+
+# Legend
 plt.legend()
-plt.grid(True)
+
+# Show the plot
 plt.show()

@@ -115,7 +115,7 @@ df_false["timing"] = add_perturbation(df_false, direction='right')
 
 fig, ax1 = plt.subplots(figsize=(7, 6))
 ax1.scatter(df_true["timing"], df_true["regret_amine"], color="deepskyblue", alpha=0.15, label="Scenarios of DR>7.8% and low CAPEX")
-ax1.scatter(df_false["timing"], df_false["regret_amine"], color="crimson", alpha=0.15, label="All scenarios")
+ax1.scatter(df_false["timing"], df_false["regret_amine"], color="crimson", alpha=0.15, label="Remaining scenarios")
 
 ax1.set_xlabel("timing")
 ax1.set_ylabel("regret_amine", color="black")
@@ -131,7 +131,7 @@ ax2 = ax1.twinx()
 timing_values = sorted(df_true["timing"].unique())  # Get the unique timing values
 density_legend_handles = []  # Store legend handles for density lines
 
-for df, line, scenario_label in [(df_true, "-", "Density (Low-regret)"), (df_false, "--", "Density (High-regret)")]:
+for df, line, scenario_label in [(df_true, "-", "Density (blue scenarios)"), (df_false, "--", "Density (red scenarios)")]:
 
     density_in_timings = []
     for timing_value in timing_values:

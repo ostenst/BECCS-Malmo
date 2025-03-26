@@ -41,8 +41,8 @@ def filter_by_decision(experiments, outcomes, decision_values):
 
 def classify(data):
     # Get the regret_ref outcome
-    result = data["regret"]
-    classes = result != 0
+    result = data["npv_ref"]
+    classes = result < 0
     return classes
 
 
@@ -135,20 +135,22 @@ if __name__ == "__main__":
 
     if 'decision' in experiments.columns:
         experiments = pd.get_dummies(experiments, columns=['decision'], drop_first=False)
-        decision_columns = [col for col in experiments.columns if col.startswith('decision_')]
+        decision_columns = [col for col in experiments.columns if col.startswith('decision')] 
         experiments[decision_columns] = experiments[decision_columns].astype(int)
 
     print(experiments.head())
     print(outcomes.head())
 
     # Let's filter the data based on the decision of interest
-    experiments, outcomes = filter_by_decision(experiments, outcomes, decision_values=["clc"])
+    experiments, outcomes = filter_by_decision(experiments, outcomes, decision_values=["ref"]) # Specify what decision to mine
     results = (experiments, outcomes)
 
     regret_zero = (outcomes["regret"] == 0).sum()
     regret_nonzero = (outcomes["regret"] != 0).sum()
+    regret_NPV_count = (outcomes["npv_ref"] < 0).sum()
     print(f" - Rows where regret == 0: {regret_zero}")
     print(f" - Rows where regret != 0: {regret_nonzero}")
+    print(f" - Rows where NPV_ref < 0: {regret_NPV_count}")
 
     cart_alg = cart.setup_cart(results, classify, mass_min=0.05)
     cart_alg.build_tree()

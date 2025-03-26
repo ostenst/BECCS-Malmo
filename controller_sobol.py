@@ -53,13 +53,18 @@ model.uncertainties = [
     CategoricalParameter("Bioshortage", [True, False]),
     CategoricalParameter("Powersurge", [True, False]),
     CategoricalParameter("Auction", [True, False]),
-]
 
-model.levers = [
     CategoricalParameter("decision", ["ref", "amine", "oxy", "clc"]),
     RealParameter("rate", 0.86, 0.94),      # High capture rates needed
     CategoricalParameter("operating_increase", [0, 600, 1200]),
     CategoricalParameter("timing", [5, 10, 15, 20]),  # When capture + storage starts
+]
+
+model.levers = [
+    # CategoricalParameter("decision", ["ref", "amine", "oxy", "clc"]),
+    # RealParameter("rate", 0.86, 0.94),      # High capture rates needed
+    # CategoricalParameter("operating_increase", [0, 600, 1200]),
+    # CategoricalParameter("timing", [5, 10, 15, 20]),  # When capture + storage starts
 ]
 
 model.outcomes = [
@@ -71,8 +76,8 @@ model.outcomes = [
 ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
-n_scenarios = 1000
-n_policies = 500
+n_scenarios = 10000
+n_policies = 0
 
 # If Sobol sampling:
 print(" NOTE : Should probably adapt this to also include some levers!")

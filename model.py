@@ -378,11 +378,11 @@ def regret_BECCS(
         "regret_amine": regret_values["amine"],
         "regret_clc": regret_values["clc"],
         "regret_oxy": regret_values["oxy"], 
-        # "regret_decision" : regret_values[decision],       
-        # "amine_capex": AMINE.CAPEX,
-        # "clc_capex": CLC.CAPEX,
-        # "oxy_capex": OXY.CAPEX,
-        # "ref_capex": 0,
+
+        "npv_ref" : npv_values["ref"],       
+        "npv_amine": npv_values["amine"],     
+        "npv_oxy": npv_values["oxy"],     
+        "npv_clc": npv_values["clc"],     
     }
 
     return results

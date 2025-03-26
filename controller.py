@@ -17,6 +17,8 @@ from ema_workbench import (
 )
 from ema_workbench.em_framework import get_SALib_problem
 from SALib.analyze import sobol
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
 
 model = Model("BECCSMalmo", function=regret_BECCS)
 
@@ -68,6 +70,11 @@ model.outcomes = [
     ScalarOutcome("regret_amine", ScalarOutcome.MINIMIZE),
     ScalarOutcome("regret_oxy", ScalarOutcome.MINIMIZE),
     ScalarOutcome("regret_clc", ScalarOutcome.MINIMIZE),
+
+    ScalarOutcome("npv_ref", ScalarOutcome.MAXIMIZE),
+    ScalarOutcome("npv_amine", ScalarOutcome.MAXIMIZE),
+    ScalarOutcome("npv_oxy", ScalarOutcome.MAXIMIZE),
+    ScalarOutcome("npv_clc", ScalarOutcome.MAXIMIZE),
 ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
@@ -87,6 +94,50 @@ print(outcomes_df)
 zero_regret_counts = outcomes_df[outcomes_df["regret"] == 0].groupby("decision")["regret"].count()
 print(zero_regret_counts)
 
-# sns.pairplot(outcomes_df, hue="decision", vars=list(outcomes.keys())) # This plots ALL outcomes
-# #  sns.pairplot(df_outcomes, hue="heat_pump", vars=["capture_cost","penalty_services","penalty_biomass"])
-# plt.show()
+# Create new columns based on npv_ref and cbio/celc comparison
+outcomes_df["npv_ref_bio"] = outcomes_df["npv_ref"].where(experiments["cbio"] > experiments["celc"])
+outcomes_df["npv_ref_elc"] = outcomes_df["npv_ref"].where(experiments["cbio"] < experiments["celc"])
+print(outcomes_df[["npv_ref", "npv_ref_bio", "npv_ref_elc"]].head())
+
+# Define regret columns
+regret_columns = ["npv_ref_bio", "npv_ref_elc", "npv_amine", "npv_oxy", "npv_clc"]
+
+# Merge experiments and outcomes by index
+df = pd.concat([experiments[["Auction", "Bioshortage"]], outcomes_df[regret_columns]], axis=1)
+
+# Define subsets based on Auction and Bioshortage values
+subsets = {
+    "Auction=False, Bioshortage=False": df[(df["Auction"] == False) & (df["Bioshortage"] == False)],
+    "Auction=False, Bioshortage=True": df[(df["Auction"] == False) & (df["Bioshortage"] == True)],
+    "Auction=True, Bioshortage=False": df[(df["Auction"] == True) & (df["Bioshortage"] == False)],
+    "Auction=True, Bioshortage=True": df[(df["Auction"] == True) & (df["Bioshortage"] == True)]
+}
+
+# Get global min/max values for y-axis synchronization
+global_min = df[regret_columns].min().min()
+global_max = df[regret_columns].max().max()
+
+column_means = df[regret_columns].mean()
+
+# Normalize mean values for colormap mapping
+norm = mcolors.Normalize(vmin=column_means.min(), vmax=column_means.max())
+cmap = cm.get_cmap("RdYlGn")  # Red-Yellow-Green colormap
+
+# Generate dynamic colors based on means
+box_colors = [mcolors.to_hex(cmap(norm(value))) for value in column_means]
+
+# Create a figure with 2x2 subplots
+fig, axes = plt.subplots(2, 2, figsize=(12, 10), sharey=True)  # Synchronize y-axis
+
+# Loop through subsets and plot boxplots
+for ax, (title, subset) in zip(axes.flatten(), subsets.items()):
+    sns.boxplot(data=subset[regret_columns], ax=ax, palette=box_colors)
+    ax.set_title(title)
+    ax.set_ylabel("NPV Values")
+    ax.set_xticklabels(regret_columns, rotation=20)
+    ax.set_ylim(global_min - 50, global_max)  # Ensure same y-axis scale
+    ax.axhline(0, color="black", linestyle="dashed", linewidth=1, alpha=0.8)
+
+# Adjust layout and show plot
+plt.tight_layout()
+plt.show()

@@ -100,7 +100,7 @@ outcomes_df["npv_ref_elc"] = outcomes_df["npv_ref"].where(experiments["cbio"] < 
 print(outcomes_df[["npv_ref", "npv_ref_bio", "npv_ref_elc"]].head())
 
 # Define regret columns
-regret_columns = ["npv_ref_bio", "npv_ref_elc", "npv_amine", "npv_oxy", "npv_clc"]
+regret_columns = ["npv_ref_bio", "npv_ref_elc", "npv_amine", "npv_oxy", "npv_clc", "regret_ref","regret_amine","regret_oxy","regret_clc",]
 
 # Merge experiments and outcomes by index
 df = pd.concat([experiments[["Auction", "Bioshortage"]], outcomes_df[regret_columns]], axis=1)
@@ -113,18 +113,24 @@ subsets = {
     "Auction=True, Bioshortage=True": df[(df["Auction"] == True) & (df["Bioshortage"] == True)]
 }
 
+# Define fixed colormap limits (adjust these as needed)
+cmap_min, cmap_max = -300, 300  # Hard-coded limits
+
 # Get global min/max values for y-axis synchronization
 global_min = df[regret_columns].min().min()
 global_max = df[regret_columns].max().max()
 
-column_means = df[regret_columns].mean()
+column_median = df[regret_columns].median()
 
-# Normalize mean values for colormap mapping
-norm = mcolors.Normalize(vmin=column_means.min(), vmax=column_means.max())
+# Clip column_means to ensure they stay within the colormap range
+clipped_median = np.clip(column_median, cmap_min, cmap_max)
+
+# Normalize clipped mean values for colormap mapping
+norm = mcolors.Normalize(vmin=cmap_min, vmax=cmap_max)
 cmap = cm.get_cmap("RdYlGn")  # Red-Yellow-Green colormap
 
-# Generate dynamic colors based on means
-box_colors = [mcolors.to_hex(cmap(norm(value))) for value in column_means]
+# Generate dynamic colors based on clipped means
+box_colors = [mcolors.to_hex(cmap(norm(value))) for value in clipped_median]
 
 # Create a figure with 2x2 subplots
 fig, axes = plt.subplots(2, 2, figsize=(12, 10), sharey=True)  # Synchronize y-axis

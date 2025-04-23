@@ -41,7 +41,7 @@ def filter_by_decision(experiments, outcomes, decision_values):
 
 def classify(data):
     # Get the regret_ref outcome
-    result = data["npv_ref"]
+    result = data["regret_1"]
     classes = result < 0
     return classes
 
@@ -145,12 +145,8 @@ if __name__ == "__main__":
     experiments, outcomes = filter_by_decision(experiments, outcomes, decision_values=["ref"]) # Specify what decision to mine
     results = (experiments, outcomes)
 
-    regret_zero = (outcomes["regret"] == 0).sum()
-    regret_nonzero = (outcomes["regret"] != 0).sum()
-    regret_NPV_count = (outcomes["npv_ref"] < 0).sum()
-    print(f" - Rows where regret == 0: {regret_zero}")
-    print(f" - Rows where regret != 0: {regret_nonzero}")
-    print(f" - Rows where NPV_ref < 0: {regret_NPV_count}")
+    regret_zero = (outcomes["regret_1"] < 0).sum()
+    print(f" - Rows where regret_1 < 0: {regret_zero}")
 
     cart_alg = cart.setup_cart(results, classify, mass_min=0.05)
     cart_alg.build_tree()
@@ -165,10 +161,11 @@ if __name__ == "__main__":
 
     # Analyze a box by filtering the experiments
     # filtered_experiments, filtered_outcomes = filter_by_box(results, df, "box 12")
+    print("\nThe below rows don't do much?")
     feature_limits = {
-        "crc": (0, 131.8), 
-        "Auction": 1,       
-        "Bioshortage": 0,
+        "crc": (0, 203), 
+        "Auction": 0,       
+        # "Bioshortage": 0,
     }
     filtered_experiments, filtered_outcomes = filter_by_feature_limits(results, feature_limits)
     n_zeroregret, n_regret = count_classifications(filtered_outcomes, classify)

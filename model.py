@@ -116,7 +116,7 @@ def regret_BECCS(
     sek=0.089,
     usd=0.96,
     ctrans=600,
-    cstore=30,
+    cstore=300,
     crc=100,
     cmea=29,    #SEK/kgmea (Ramboll)
     coc=500,    #EUR/tOC Magnus/Felicia
@@ -237,7 +237,7 @@ def regret_BECCS(
         'POC' : ( 48.67*10**-6*(CLC.mfluegas) * (1 + np.exp(0.018*(850+273.15)-26.4)) * 1/(0.995-0.98) )*usd * CEPCI/585.7 *1.3,
         'ASU' : cASU * ( 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*1000*3600/453.592)**0.852 )*usd * CEPCI/499.6 *1.3,
         'OCash' : (4.6*(mash/6.7)**0.56)*usd * CEPCI/603.1 *1.2,
-        'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  #Assuming that Deng had cost year = 2019 NOTE: unclear if installation 1.3 should be included or not?
+        'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  #Assuming that Deng had cost year = 2019 NOTE: unclear if installation 1.3 should be included or not? NOTE: Kjästad estimates CL cost in SKEPPKOSTNAD excel?
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2, #Function from Judit, 4000m3 from Ramboll, CEPCI from Google
     }
     OXY.shopping_list = {
@@ -337,7 +337,7 @@ def regret_BECCS(
                 costs += TECH.Qfuel * TECH.operating * cbio * 10**-6  # Biomass fuel costs
                 revenues += (TECH.Qnet * (cheat * celc) + TECH.P * celc) * TECH.operating * 10**-6  # Revenue from CHP
 
-                costs += TECH.mcaptured / 1000 * 3600 * TECH.operating * (ctrans*sek + cstore) * 10**-6  # Capture and storage costs
+                costs += TECH.mcaptured / 1000 * 3600 * TECH.operating * (ctrans*sek + cstore*sek) * 10**-6  # Capture and storage costs
                 if Auction and t < timing+15+2: #Add two years for the capital delay before operations
                     revenues += TECH.mcaptured / 1000 * 3600 * TECH.operating * (crc+160) * 10**-6  # Revenue from CO2 capture credits
                 else:
@@ -370,14 +370,16 @@ def regret_BECCS(
         initial_celc = celc
         npv_values[tech.name] = calculate_NPV(tech, initial_cbio, initial_celc)
 
-    regret_values = {tech.name: calculate_regret(tech.name, npv_values) for tech in TECHS}
+    # Recalculate regret values according to new RQs
+    # regret_values = {tech.name: calculate_regret(tech.name, npv_values) for tech in TECHS}
+    regret_1 = npv_values["ref"] - npv_values["amine"] 
+    regret_2 = npv_values["oxy"] - npv_values["amine"]
+    regret_3 = npv_values["clc"] - npv_values["amine"]
 
     results = {
-        "regret" : regret_values[decision], 
-        "regret_ref": regret_values["ref"],
-        "regret_amine": regret_values["amine"],
-        "regret_clc": regret_values["clc"],
-        "regret_oxy": regret_values["oxy"], 
+        "regret_1" : regret_1, 
+        "regret_2": regret_2,
+        "regret_3": regret_3,
 
         "npv_ref" : npv_values["ref"],       
         "npv_amine": npv_values["amine"],     
@@ -391,5 +393,9 @@ def regret_BECCS(
 if __name__ == "__main__":
 
     dict = regret_BECCS()
+
     print(" TEST THE CONTROLLER AND IMPLEMENT THE 4 SHOCKS ")
-    print("I regret my amine decision this much in terms of NPV [MEUR]:\n", dict["regret_amine"])
+    print("On this branch, we have three types of regret outputs. So the regret function and outputs need to be adapted.")
+    print("amine vs. ref regret=", dict["regret_1"])
+    print("amine vs. oxy regret=", dict["regret_2"])
+    print("amine vs. clc regret=", dict["regret_3"])

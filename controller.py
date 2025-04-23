@@ -2,6 +2,7 @@ import numpy as np
 from model import *
 import matplotlib.pyplot as plt
 import seaborn as sns
+import itertools
 import pandas as pd
 from ema_workbench import (
     Model,
@@ -35,11 +36,11 @@ model.uncertainties = [
     RealParameter("CEPCI", 700, 900),
     RealParameter("sek", 0.08, 0.10),
     RealParameter("usd", 0.90, 1.00),
-    RealParameter("ctrans", 550, 650),        # SEK/tCO2, Kjärstad
-    RealParameter("cstore", 10, 25),        # Storage cost, ZEP
-    RealParameter("crc", 50, 300),          # Reference cost
+    RealParameter("ctrans", 554, 755),        # SEK/tCO2, Kjärstad @Gävle 555nm, INCLUDES C&L???
+    RealParameter("cstore", 201, 496),        # SEK/tCO2, Kjärstad @NL, calculate by total_system - only_transport
+    RealParameter("crc", 50, 400),          # Reference cost
     RealParameter("cmea", 25, 35),         # SEK/kg, Ramboll
-    RealParameter("coc", 400, 600),         # EUR/t, Magnus/Felicia
+    RealParameter("coc", 200, 600),         # EUR/t, Magnus/Felicia
 
     RealParameter("cAM", 1, 2),
     RealParameter("cFR", 1, 2),
@@ -65,11 +66,9 @@ model.levers = [
 ]
 
 model.outcomes = [
-    ScalarOutcome("regret", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("regret_ref", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("regret_amine", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("regret_oxy", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("regret_clc", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("regret_1", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("regret_2", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("regret_3", ScalarOutcome.MINIMIZE),
 
     ScalarOutcome("npv_ref", ScalarOutcome.MAXIMIZE),
     ScalarOutcome("npv_amine", ScalarOutcome.MAXIMIZE),
@@ -78,8 +77,8 @@ model.outcomes = [
 ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
-n_scenarios = 1000
-n_policies = 500
+n_scenarios = 800
+n_policies = 300
 
 # Regular LHS sampling:
 results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.LHS, lever_sampling = Samplers.LHS)
@@ -89,61 +88,68 @@ outcomes_df = pd.DataFrame(outcomes)
 experiments.to_csv("experiments.csv", index=False)
 outcomes_df.to_csv("outcomes.csv", index=False)
 outcomes_df["decision"] = experiments["decision"]
+outcomes_df["Auction"] = experiments["Auction"]
+outcomes_df["Bioshortage"] = experiments["Bioshortage"]
 print(outcomes_df)
 
-zero_regret_counts = outcomes_df[outcomes_df["regret"] == 0].groupby("decision")["regret"].count()
-print(zero_regret_counts)
-
-# Create new columns based on npv_ref and cbio/celc comparison
-outcomes_df["npv_ref_bio"] = outcomes_df["npv_ref"].where(experiments["cbio"] > experiments["celc"])
-outcomes_df["npv_ref_elc"] = outcomes_df["npv_ref"].where(experiments["cbio"] < experiments["celc"])
-print(outcomes_df[["npv_ref", "npv_ref_bio", "npv_ref_elc"]].head())
-
+# ---- Plot 1: Regret boxplots with color legend ----
 # Define regret columns
-regret_columns = ["npv_ref_bio", "npv_ref_elc", "npv_amine", "npv_oxy", "npv_clc", "regret_ref","regret_amine","regret_oxy","regret_clc",]
+regret_cols = ["regret_1", "regret_2", "regret_3"]
+cmap = cm.RdYlGn_r
+norm = mcolors.Normalize(vmin=0, vmax=1)
 
-# Merge experiments and outcomes by index
-df = pd.concat([experiments[["Auction", "Bioshortage"]], outcomes_df[regret_columns]], axis=1)
+# Loop over all combinations of Auction and Bioshortage
+combinations = list(itertools.product([True, False], [True, False]))
 
-# Define subsets based on Auction and Bioshortage values
-subsets = {
-    "Auction=False, Bioshortage=False": df[(df["Auction"] == False) & (df["Bioshortage"] == False)],
-    "Auction=False, Bioshortage=True": df[(df["Auction"] == False) & (df["Bioshortage"] == True)],
-    "Auction=True, Bioshortage=False": df[(df["Auction"] == True) & (df["Bioshortage"] == False)],
-    "Auction=True, Bioshortage=True": df[(df["Auction"] == True) & (df["Bioshortage"] == True)]
-}
+for auction_val, bio_val in combinations:
+    # Subset the dataframe
+    subset = outcomes_df[(outcomes_df["Auction"] == auction_val) & (outcomes_df["Bioshortage"] == bio_val)]
+    
+    # Melt for plotting
+    regret_df = subset[regret_cols].melt(var_name="Regret Type", value_name="Value")
+    
+    # Calculate regret frequencies
+    regret_frequencies = (subset[regret_cols] > 0).mean()
+    colors = [cmap(regret_frequencies[col]) for col in regret_cols]
+    custom_palette = dict(zip(regret_cols, colors))
+    
+    # Create boxplot
+    plt.figure(figsize=(8, 6))
+    sns.boxplot(data=regret_df, x="Regret Type", y="Value", palette=custom_palette)
+    for y in [-200, 0, 200]:
+        plt.axhline(y=y, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
 
-# Define fixed colormap limits (adjust these as needed)
-cmap_min, cmap_max = -300, 300  # Hard-coded limits
+    # Title and labels
+    plt.title(f"Regret Distribution\nAuction: {auction_val}, Bioshortage: {bio_val}\n(Box Color = % Regret > 0)")
+    plt.ylabel("Regret")
+    plt.xlabel("Regret Type")
+    
+    # Colorbar legend
+    sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=plt.gca(), orientation="vertical", pad=0.02, shrink=0.8)
+    cbar.set_label("% of Regret > 0", rotation=270, labelpad=15)
+    cbar.ax.set_yticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
+    
+    # Layout and show
+    plt.tight_layout()
+# plt.show()
 
-# Get global min/max values for y-axis synchronization
-global_min = df[regret_columns].min().min()
-global_max = df[regret_columns].max().max()
+# Create horizontal colorbar figure
+fig, ax = plt.subplots(figsize=(5, 1.3))  # Wider and short height
+fig.subplots_adjust(bottom=0.5)
 
-column_median = df[regret_columns].median()
+# Dummy mappable for colorbar
+sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+sm.set_array([])
 
-# Clip column_means to ensure they stay within the colormap range
-clipped_median = np.clip(column_median, cmap_min, cmap_max)
+# Create horizontal colorbar
+cbar = plt.colorbar(sm, cax=ax, orientation='horizontal')
+cbar.set_label("% of Regret > 0", fontsize=12, labelpad=10)
+cbar.ax.tick_params(labelsize=14)  # Increase tick label size
+cbar.set_ticks([0.0, 0.25, 0.5, 0.75, 1.0])
+cbar.ax.set_xticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
 
-# Normalize clipped mean values for colormap mapping
-norm = mcolors.Normalize(vmin=cmap_min, vmax=cmap_max)
-cmap = cm.get_cmap("RdYlGn")  # Red-Yellow-Green colormap
-
-# Generate dynamic colors based on clipped means
-box_colors = [mcolors.to_hex(cmap(norm(value))) for value in clipped_median]
-
-# Create a figure with 2x2 subplots
-fig, axes = plt.subplots(2, 2, figsize=(12, 10), sharey=True)  # Synchronize y-axis
-
-# Loop through subsets and plot boxplots
-for ax, (title, subset) in zip(axes.flatten(), subsets.items()):
-    sns.boxplot(data=subset[regret_columns], ax=ax, palette=box_colors)
-    ax.set_title(title)
-    ax.set_ylabel("NPV Values")
-    ax.set_xticklabels(regret_columns, rotation=20)
-    ax.set_ylim(global_min - 50, global_max)  # Ensure same y-axis scale
-    ax.axhline(0, color="black", linestyle="dashed", linewidth=1, alpha=0.8)
-
-# Adjust layout and show plot
+plt.title("Colorbar Legend", fontsize=13, pad=10)
 plt.tight_layout()
 plt.show()

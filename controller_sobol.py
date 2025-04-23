@@ -33,11 +33,11 @@ model.uncertainties = [
     RealParameter("CEPCI", 700, 900),
     RealParameter("sek", 0.08, 0.10),
     RealParameter("usd", 0.90, 1.00),
-    RealParameter("ctrans", 550, 650),        # SEK/tCO2, Kjärstad
-    RealParameter("cstore", 10, 25),        # Storage cost, ZEP
-    RealParameter("crc", 50, 300),          # Reference cost
+    RealParameter("ctrans", 554, 755),        # SEK/tCO2, Kjärstad @Gävle 555nm, INCLUDES C&L???
+    RealParameter("cstore", 201, 496),        # SEK/tCO2, Kjärstad @NL, calculate by total_system - only_transport
+    RealParameter("crc", 50, 400),          # Reference cost
     RealParameter("cmea", 25, 35),         # SEK/kg, Ramboll
-    RealParameter("coc", 400, 600),         # EUR/t, Magnus/Felicia
+    RealParameter("coc", 200, 600),         # EUR/t, Magnus/Felicia
 
     RealParameter("cAM", 1, 2),
     RealParameter("cFR", 1, 2),
@@ -68,21 +68,25 @@ model.levers = [
 ]
 
 model.outcomes = [
-    ScalarOutcome("regret", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("regret_ref", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("regret_amine", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("regret_oxy", ScalarOutcome.MINIMIZE),
-    ScalarOutcome("regret_clc", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("regret_1", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("regret_2", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("regret_3", ScalarOutcome.MINIMIZE),
+
+    ScalarOutcome("npv_ref", ScalarOutcome.MAXIMIZE),
+    ScalarOutcome("npv_amine", ScalarOutcome.MAXIMIZE),
+    ScalarOutcome("npv_oxy", ScalarOutcome.MAXIMIZE),
+    ScalarOutcome("npv_clc", ScalarOutcome.MAXIMIZE),
 ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
-n_scenarios = 10000
+n_scenarios = 2000
 n_policies = 0
 
 # If Sobol sampling:
-print(" NOTE : Should probably adapt this to also include some levers!")
+print(" NOTE : You must specify 1 lever to analyze sensitivity on")
 results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.SOBOL, lever_sampling = Samplers.SOBOL)
 experiments, outcomes = results
+
 def analyze(results, ooi):
     """analyze results using SALib sobol, returns a dataframe"""
     _, outcomes = results
@@ -98,7 +102,7 @@ def analyze(results, ooi):
         sobol_indices["S2_conf"], index=problem["names"], columns=problem["names"]
     )
     return sobol_stats, s2, s2_conf, problem
-sobol_stats, s2, s2_conf, problem = analyze(results, "regret")
+sobol_stats, s2, s2_conf, problem = analyze(results, "regret_1")
 print(sobol_stats)
 print(s2)
 print(s2_conf)
@@ -119,4 +123,71 @@ plt.ylabel("Parameter")
 plt.xlabel("Total Sobol Index (ST)")
 plt.title("Total-Order Sobol Indices with Confidence Intervals")
 plt.grid(axis="x", linestyle="--", alpha=0.7)
+
+
+# ---- Sobol Circular Radial Plot: Top 10 ST with S1 overlay and S2 lines ----
+# Sort and select top 10 parameters based on ST
+top_10 = sobol_stats.sort_values(by="ST", ascending=False).head(10)
+labels = top_10.index.tolist()
+ST = top_10["ST"].values
+S1 = top_10["S1"].values
+
+# Extract corresponding S2 matrix
+indices = [sobol_stats.index.get_loc(label) for label in labels]
+S2_matrix_top = s2.values[np.ix_(indices, indices)]
+
+n = len(labels)
+
+# Fixed circle layout
+angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
+radius = 1.0
+x = radius * np.cos(angles)
+y = radius * np.sin(angles)
+
+# Normalize ST and S1 for node sizes
+min_size, max_size = 20, 2000
+ST_scaled = min_size + (max_size - min_size) * (ST / ST.max())
+S1_scaled = min_size + (max_size - min_size) * (S1 / S1.max())
+
+# --- Plot ---
+fig, ax = plt.subplots(figsize=(4.5, 4.5))
+ax.set_aspect('equal')
+ax.axis('off')
+
+# Plot S2 interaction edges
+max_s2 = np.nanmax(S2_matrix_top)
+for i in range(n):
+    for j in range(i + 1, n):
+        s2_val = S2_matrix_top[i, j]
+        if not np.isnan(s2_val) and s2_val > 0.01:
+            x_vals = [x[i], x[j]]
+            y_vals = [y[i], y[j]]
+            lw = 0.5 + 5 * (s2_val / max_s2)
+            ax.plot(x_vals, y_vals, color='grey', alpha=0.6, linewidth=lw)
+
+# Plot ST nodes (base)
+ax.scatter(x, y, s=ST_scaled, color='crimson', alpha=1.0, edgecolor='none')
+
+# Overlay S1 nodes (on top)
+ax.scatter(x, y, s=S1_scaled, color='deepskyblue', alpha=1.0, edgecolor='none')
+
+# Add labels
+for i in range(n):
+    ax.text(x[i]*1.5, y[i]*1.5, labels[i], ha='center', va='center', fontsize=7)
+    if ST[i] > 0.08:
+        ax.text(x[i], y[i], round(ST[i],2), color='midnightblue', ha='center', va='center', fontsize=7)
+
+circle = plt.Circle((0, 0), 1.2, color='black', fill=False, linewidth=1.0, zorder=10)
+ax.add_patch(circle)
+
+# Set axis limits with margin
+padding = 1.3  # Adjust this based on how big your nodes are
+ax.set_xlim(-padding, padding)
+ax.set_ylim(-padding, padding)
+
+# Title
+ax.set_title("Top 10 Parameters - Radial Sensitivity Map\nRed = ST, Blue = S1, Gray Lines = S2", fontsize=10, pad=20)
+
+# plt.tight_layout()
+plt.savefig('sobol.png', dpi=450, bbox_inches='tight')
 plt.show()

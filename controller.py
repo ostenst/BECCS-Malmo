@@ -96,6 +96,7 @@ print(outcomes_df)
 # Define regret columns
 regret_cols = ["regret_1", "regret_2", "regret_3"]
 cmap = cm.RdYlGn_r
+# cmap = cm.seismic
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
 # Loop over all combinations of Auction and Bioshortage

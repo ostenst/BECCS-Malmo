@@ -39,8 +39,8 @@ x_false, y_false = compute_regret_fraction(df_false)
 fig, ax1 = plt.subplots(figsize=(8.5, 6))
 
 # Scatter on left y-axis
-ax1.scatter(df_true["crc"], df_true["regret_1"], alpha=0.3, label="Scenario with auction subsidy (160 EUR/t)", color="crimson", s=10)
-ax1.scatter(df_false["crc"], df_false["regret_1"], alpha=0.3, label="Scenario without subsidy", color="deepskyblue", s=10)
+ax1.scatter(df_true["crc"], df_true["regret_1"], alpha=0.3, label="Scenario with auction subsidy (160 EUR/t)", color="deepskyblue", s=10)
+ax1.scatter(df_false["crc"], df_false["regret_1"], alpha=0.3, label="Scenario without subsidy", color="crimson", s=10)
 
 ax1.set_xlabel("CRC")
 ax1.set_ylabel("regret_1")
@@ -51,8 +51,8 @@ ax1.set_xlim(50, 400)
 
 # Create second y-axis
 ax2 = ax1.twinx()
-ax2.plot(x_true, y_true*100, marker='o', label="Fraction of regrettable scenarios (with subsidy)", color="firebrick", linewidth=2)
-ax2.plot(x_false, y_false*100, marker='o', label="Fraction of regrettable scenarios (no subsidy)", color="dodgerblue", linewidth=2)
+ax2.plot(x_true, y_true*100, marker='o', label="Fraction of regrettable scenarios (with subsidy)", color="dodgerblue", linewidth=2)
+ax2.plot(x_false, y_false*100, marker='o', label="Fraction of regrettable scenarios (no subsidy)", color="firebrick", linewidth=2)
 ax2.set_ylabel("Fraction of regret_1 > 0 [%]")
 ax2.set_ylim(-5, 105)
 

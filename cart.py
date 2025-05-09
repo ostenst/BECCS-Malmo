@@ -41,8 +41,8 @@ def filter_by_decision(experiments, outcomes, decision_values):
 
 def classify(data):
     # Get the regret_ref outcome
-    result = data["regret_1"]
-    classes = result < 0
+    result = data["regret_2"]
+    classes = result > 0
     return classes
 
 
@@ -141,12 +141,12 @@ if __name__ == "__main__":
     print(experiments.head())
     print(outcomes.head())
 
-    # Let's filter the data based on the decision of interest
-    experiments, outcomes = filter_by_decision(experiments, outcomes, decision_values=["ref"]) # Specify what decision to mine
+    # # Let's filter the data based on the decision of interest (edit) not needed?
+    # experiments, outcomes = filter_by_decision(experiments, outcomes, decision_values=["ref"]) # Specify what decision to mine
     results = (experiments, outcomes)
 
-    regret_zero = (outcomes["regret_1"] < 0).sum()
-    print(f" - Rows where regret_1 < 0: {regret_zero}")
+    regret_zero = (outcomes["regret_2"] > 0).sum()
+    print(f" - Rows where regret_2 > 0: {regret_zero}")
 
     cart_alg = cart.setup_cart(results, classify, mass_min=0.05)
     cart_alg.build_tree()

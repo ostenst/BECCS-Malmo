@@ -30,38 +30,44 @@ model.uncertainties = [
     RealParameter("operating", 4000, 5000), # Operating hours
     RealParameter("dr", 0.05, 0.10),        # Discount rate
     IntegerParameter("lifetime", 20, 30),      # Economic lifetime
-    RealParameter("celc", 10, 120),
+    RealParameter("celc", 10, 120),         # Beiron tycker 100?
     RealParameter("cheat", 0.50, 0.95),
-    RealParameter("cbio", 20, 100),
+    RealParameter("cbio", 20, 100),         # BEIRON, insikter
     RealParameter("CEPCI", 700, 900),
     RealParameter("sek", 0.08, 0.10),
     RealParameter("usd", 0.90, 1.00),
     RealParameter("ctrans", 554, 755),        # SEK/tCO2, Kjärstad @Gävle 555nm, INCLUDES C&L???
     RealParameter("cstore", 201, 496),        # SEK/tCO2, Kjärstad @NL, calculate by total_system - only_transport
-    RealParameter("crc", 50, 400),          # Reference cost
+    RealParameter("crc", 50, 300),          # Reference cost
     RealParameter("cmea", 25, 35),         # SEK/kg, Ramboll
     RealParameter("coc", 200, 600),         # EUR/t, Magnus/Felicia
 
-    RealParameter("cAM", 1, 2),
-    RealParameter("cFR", 1, 2),
-    RealParameter("cycl", 1, 2),
-    RealParameter("cASU", 1, 2),
+    RealParameter("cAM", 1723, 2585),       # +-20% of Ramboll CAPEX
+    RealParameter("cFR", 0.48, 0.72),       # +-20% of Macroscopic CAPEX exponent   
+    RealParameter("cASU", 0.68, 1.02),      # +-20% of Macroscopic CAPEX exponent   
 
-    RealParameter("EPC", 0.15, 0.25),
-    RealParameter("contingency_process", 0.03, 0.07),
-    RealParameter("contingency_clc", 0.30, 0.50),
-    RealParameter("contingency_project", 0.15, 0.25),
-    RealParameter("ownercost", 0.15, 0.25),
+    RealParameter("EPC", 0.14, 0.21),       # +-20% of Macroscopic EPC
+    RealParameter("contingencies", 0.15, 0.35), # Ramboll uses 25%
+    RealParameter("ownercost", 0.03, 0.07),             # Ramboll uses 5%
+    RealParameter("overrun", 0.00, 0.45),           #Beiron FOAK=NOAK costs
+    RealParameter("immature", 0.00, 3.00),       
+
+    RealParameter("EUA", 5, 10),    # +ETS increases
+    RealParameter("ceiling", 200, 350),
 
     CategoricalParameter("Bioshortage", [True, False]),
     CategoricalParameter("Powersurge", [True, False]),
     CategoricalParameter("Auction", [True, False]),
+    CategoricalParameter("Denial", [True, False]),
+    CategoricalParameter("Integration", [True, False]),
+    CategoricalParameter("Capping", [True, False]),
+    CategoricalParameter("Procurement", [True, False]),
+    CategoricalParameter("Time", ["Baseline", "Downtime", "Uptime"]),
 ]
 
 model.levers = [
-    CategoricalParameter("decision", ["ref", "amine", "oxy", "clc"]),
+    # CategoricalParameter("decision", ["ref", "amine", "oxy", "clc"]),
     RealParameter("rate", 0.86, 0.94),      # High capture rates needed
-    CategoricalParameter("operating_increase", [0, 600, 1200]),
     CategoricalParameter("timing", [5, 10, 15, 20]),  # When capture + storage starts
 ]
 
@@ -78,7 +84,7 @@ model.outcomes = [
 
 ema_logging.log_to_stderr(ema_logging.INFO)
 n_scenarios = 800
-n_policies = 300
+n_policies = 100
 
 # Regular LHS sampling:
 results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.LHS, lever_sampling = Samplers.LHS)
@@ -87,9 +93,9 @@ experiments, outcomes = results
 outcomes_df = pd.DataFrame(outcomes)
 experiments.to_csv("experiments.csv", index=False)
 outcomes_df.to_csv("outcomes.csv", index=False)
-outcomes_df["decision"] = experiments["decision"]
+# outcomes_df["decision"] = experiments["decision"]
 outcomes_df["Auction"] = experiments["Auction"]
-outcomes_df["Bioshortage"] = experiments["Bioshortage"]
+outcomes_df["Denial"] = experiments["Denial"]
 print(outcomes_df)
 
 # ---- Plot 1: Regret boxplots with color legend ----
@@ -99,12 +105,12 @@ cmap = cm.RdYlGn_r
 # cmap = cm.seismic
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
-# Loop over all combinations of Auction and Bioshortage
+# Loop over all combinations of Auction and Denial
 combinations = list(itertools.product([True, False], [True, False]))
 
 for auction_val, bio_val in combinations:
     # Subset the dataframe
-    subset = outcomes_df[(outcomes_df["Auction"] == auction_val) & (outcomes_df["Bioshortage"] == bio_val)]
+    subset = outcomes_df[(outcomes_df["Auction"] == auction_val) & (outcomes_df["Denial"] == bio_val)]
     
     # Melt for plotting
     regret_df = subset[regret_cols].melt(var_name="Regret Type", value_name="Value")
@@ -121,7 +127,7 @@ for auction_val, bio_val in combinations:
         plt.axhline(y=y, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
 
     # Title and labels
-    plt.title(f"Regret Distribution\nAuction: {auction_val}, Bioshortage: {bio_val}\n(Box Color = % Regret > 0)")
+    plt.title(f"Regret Distribution\nAuction: {auction_val}, Denial: {bio_val}\n(Box Color = % Regret > 0)")
     plt.ylabel("Regret")
     plt.xlabel("Regret Type")
     

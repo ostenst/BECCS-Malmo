@@ -34,11 +34,11 @@ model.uncertainties = [
     RealParameter("cheat", 0.50, 0.95),
     RealParameter("cbio", 20, 100),         # BEIRON, insikter
     RealParameter("CEPCI", 700, 900),
-    RealParameter("sek", 0.08, 0.10),
-    RealParameter("usd", 0.90, 1.00),
+    # RealParameter("sek", 0.08, 0.10),
+    # RealParameter("usd", 0.90, 1.00),
     RealParameter("ctrans", 554, 755),        # SEK/tCO2, Kjärstad @Gävle 555nm, INCLUDES C&L???
     RealParameter("cstore", 201, 496),        # SEK/tCO2, Kjärstad @NL, calculate by total_system - only_transport
-    RealParameter("crc", 50, 300),          # Reference cost
+    RealParameter("crc", 25, 300),          # Reference cost
     RealParameter("cmea", 25, 35),         # SEK/kg, Ramboll
     RealParameter("coc", 200, 600),         # EUR/t, Magnus/Felicia
 
@@ -52,13 +52,13 @@ model.uncertainties = [
     RealParameter("overrun", 0.00, 0.45),           #Beiron FOAK=NOAK costs
     RealParameter("immature", 0.00, 3.00),       
 
-    RealParameter("EUA", 5, 10),    # +ETS increases
+    RealParameter("EUA", 0, 10),    # +ETS increases
     RealParameter("ceiling", 200, 350),
 
     CategoricalParameter("Bioshortage", [True, False]),
     CategoricalParameter("Powersurge", [True, False]),
     CategoricalParameter("Auction", [True, False]),
-    CategoricalParameter("Denial", [True, False]),
+    # CategoricalParameter("Denial", [True, False]),
     CategoricalParameter("Integration", [True, False]),
     CategoricalParameter("Capping", [True, False]),
     CategoricalParameter("Procurement", [True, False]),
@@ -82,10 +82,14 @@ model.outcomes = [
     ScalarOutcome("npv_clc", ScalarOutcome.MAXIMIZE),
 ]
 
-ema_logging.log_to_stderr(ema_logging.INFO)
-n_scenarios = 800
-n_policies = 100
+# model.constants = [
+#     RealParameter("sek", 0.089),
+#     RealParameter("usd", 0.96),
+# ]
 
+ema_logging.log_to_stderr(ema_logging.INFO)
+n_scenarios = 1000
+n_policies = 100
 # Regular LHS sampling:
 results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.LHS, lever_sampling = Samplers.LHS)
 experiments, outcomes = results
@@ -93,70 +97,163 @@ experiments, outcomes = results
 outcomes_df = pd.DataFrame(outcomes)
 experiments.to_csv("experiments.csv", index=False)
 outcomes_df.to_csv("outcomes.csv", index=False)
-# outcomes_df["decision"] = experiments["decision"]
+
 outcomes_df["Auction"] = experiments["Auction"]
-outcomes_df["Denial"] = experiments["Denial"]
+outcomes_df["Time"] = experiments["Time"]
+outcomes_df["cASU"] = experiments["cASU"]
+outcomes_df["timing"] = experiments["timing"]
+outcomes_df["immature"] = experiments["immature"]
 print(outcomes_df)
 
-# ---- Plot 1: Regret boxplots with color legend ----
-# Define regret columns
-regret_cols = ["regret_1", "regret_2", "regret_3"]
+
+## ------------------ PLOTTING REGRET_1 ------------------ ##
+# Define the subsets
+subsets = {
+    "All Data": outcomes_df,
+    "Time = Downtime": outcomes_df[outcomes_df["Time"] == "Downtime"],
+    # "Auction = False": outcomes_df[outcomes_df["Auction"] == False],
+    "Auction = False and Time = Downtime": outcomes_df[
+        (outcomes_df["Auction"] == False) & (outcomes_df["Time"] == "Downtime")
+    ]
+}
+
+# Set up color mapping
+regret_col = "regret_1"
 cmap = cm.RdYlGn_r
 # cmap = cm.seismic
+# cmap = cm.Spectral_r
+# cmap = cm.Reds
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
-# Loop over all combinations of Auction and Denial
-combinations = list(itertools.product([True, False], [True, False]))
+ymin, ymax = -800, 800
 
-for auction_val, bio_val in combinations:
-    # Subset the dataframe
-    subset = outcomes_df[(outcomes_df["Auction"] == auction_val) & (outcomes_df["Denial"] == bio_val)]
-    
-    # Melt for plotting
-    regret_df = subset[regret_cols].melt(var_name="Regret Type", value_name="Value")
-    
-    # Calculate regret frequencies
-    regret_frequencies = (subset[regret_cols] > 0).mean()
-    colors = [cmap(regret_frequencies[col]) for col in regret_cols]
-    custom_palette = dict(zip(regret_cols, colors))
-    
-    # Create boxplot
-    plt.figure(figsize=(8, 6))
-    sns.boxplot(data=regret_df, x="Regret Type", y="Value", palette=custom_palette)
-    for y in [-200, 0, 200]:
-        plt.axhline(y=y, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
+# Loop over each subset
+for title_suffix, subset in subsets.items():
 
-    # Title and labels
-    plt.title(f"Regret Distribution\nAuction: {auction_val}, Denial: {bio_val}\n(Box Color = % Regret > 0)")
-    plt.ylabel("Regret")
-    plt.xlabel("Regret Type")
-    
-    # Colorbar legend
+    regret_freq = (subset[regret_col] > 0).mean()
+    box_color = cmap(regret_freq)
+
+    fig, ax = plt.subplots(figsize=(3.5, 10))
+    sns.boxplot(data=subset, y=regret_col, color=box_color, ax=ax)
+    ax.axhline(0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
+
+    # Set fixed y-limits
+    ax.set_ylim(ymin, ymax)
+
+    ax.set_title(f"Regret Distribution for '{regret_col}'\n{title_suffix} (Color = {int(regret_freq*100)}% Regret > 0)")
+    ax.set_ylabel("Regret")
+    ax.set_xlabel("")
+
+    # Colorbar
     sm = cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    cbar = plt.colorbar(sm, ax=plt.gca(), orientation="vertical", pad=0.02, shrink=0.8)
+    cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02, shrink=0.8)
     cbar.set_label("% of Regret > 0", rotation=270, labelpad=15)
     cbar.ax.set_yticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
-    
-    # Layout and show
+
     plt.tight_layout()
-# plt.show()
+    filename = f"regret_1_{title_suffix.replace(' ', '_').replace('=', '')}.png"
+    plt.savefig(filename, dpi=600)
 
-# Create horizontal colorbar figure
-fig, ax = plt.subplots(figsize=(5, 1.3))  # Wider and short height
-fig.subplots_adjust(bottom=0.5)
+## ------------------ PLOTTING REGRET_2 ------------------ ##
+# Define the subsets
+subsets = {
+    "All Data": outcomes_df,
+    "cASU_low": outcomes_df[outcomes_df["cASU"] < 0.85],
+    "timing_early and cASU": outcomes_df[
+        ((outcomes_df["timing"] == 5) | (outcomes_df["timing"] == 10)) &
+        (outcomes_df["cASU"] < 0.85)
+    ]
+}
 
-# Dummy mappable for colorbar
-sm = cm.ScalarMappable(cmap=cmap, norm=norm)
-sm.set_array([])
+# Set up color mapping
+regret_col = "regret_2"
+cmap = cm.RdYlGn_r
+# cmap = cm.seismic
+# cmap = cm.Spectral_r
+# cmap = cm.Reds
+norm = mcolors.Normalize(vmin=0, vmax=1)
 
-# Create horizontal colorbar
-cbar = plt.colorbar(sm, cax=ax, orientation='horizontal')
-cbar.set_label("% of Regret > 0", fontsize=12, labelpad=10)
-cbar.ax.tick_params(labelsize=14)  # Increase tick label size
-cbar.set_ticks([0.0, 0.25, 0.5, 0.75, 1.0])
-cbar.ax.set_xticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
+ymin, ymax = -250, 250
 
-plt.title("Colorbar Legend", fontsize=13, pad=10)
-plt.tight_layout()
+# Loop over each subset
+for title_suffix, subset in subsets.items():
+
+    regret_freq = (subset[regret_col] > 0).mean()
+    box_color = cmap(regret_freq)
+
+    fig, ax = plt.subplots(figsize=(3.5, 10))
+    sns.boxplot(data=subset, y=regret_col, color=box_color, ax=ax)
+    ax.axhline(0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
+
+    # Set fixed y-limits
+    ax.set_ylim(ymin, ymax)
+
+    ax.set_title(f"Regret Distribution for '{regret_col}'\n{title_suffix} (Color = {int(regret_freq*100)}% Regret > 0)")
+    ax.set_ylabel("Regret")
+    ax.set_xlabel("")
+
+    # Colorbar
+    sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02, shrink=0.8)
+    cbar.set_label("% of Regret > 0", rotation=270, labelpad=15)
+    cbar.ax.set_yticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
+
+    plt.tight_layout()
+    filename = f"regret_2_{title_suffix.replace(' ', '_').replace('=', '')}.png"
+    plt.savefig(filename, dpi=600)
+
+## ------------------ PLOTTING REGRET_3 ------------------ ##
+# Define the subsets
+subsets = {
+    "All Data": outcomes_df,
+    "immature_low": outcomes_df[outcomes_df["immature"] < 1.50],
+    # "timing_early": outcomes_df[
+    #     (outcomes_df["timing"] == 5) | (outcomes_df["timing"] == 10)
+    # ],
+    "timing_early and immature": outcomes_df[
+        ((outcomes_df["timing"] == 5) | (outcomes_df["timing"] == 10)) &
+        (outcomes_df["immature"] < 1.50)
+    ]
+}
+
+# Set up color mapping
+regret_col = "regret_3"
+cmap = cm.RdYlGn_r
+# cmap = cm.seismic
+# cmap = cm.Spectral_r
+# cmap = cm.Reds
+norm = mcolors.Normalize(vmin=0, vmax=1)
+
+ymin, ymax = -250, 250
+
+# Loop over each subset
+for title_suffix, subset in subsets.items():
+
+    regret_freq = (subset[regret_col] > 0).mean()
+    box_color = cmap(regret_freq)
+
+    fig, ax = plt.subplots(figsize=(3.5, 10))
+    sns.boxplot(data=subset, y=regret_col, color=box_color, ax=ax)
+    ax.axhline(0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
+
+    # Set fixed y-limits
+    ax.set_ylim(ymin, ymax)
+
+    ax.set_title(f"Regret Distribution for '{regret_col}'\n{title_suffix} (Color = {int(regret_freq*100)}% Regret > 0)")
+    ax.set_ylabel("Regret")
+    ax.set_xlabel("")
+
+    # Colorbar
+    sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02, shrink=0.8)
+    cbar.set_label("% of Regret > 0", rotation=270, labelpad=15)
+    cbar.ax.set_yticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
+
+    plt.tight_layout()
+    filename = f"regret_3_{title_suffix.replace(' ', '_').replace('=', '')}.png"
+    plt.savefig(filename, dpi=600)
+
 plt.show()

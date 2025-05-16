@@ -80,7 +80,7 @@ def regret_BECCS(
     Bioshortage = False,  # True if biomass price increases by 15% per year
     Powersurge = False,   # True if electricity price increases by 20% per year
     Auction = False,      # True if additional revenue from CRC is added
-    Denial = False,
+    # Denial = False,
     Integration = True,  
     Capping = True,
     Procurement = True, 
@@ -274,7 +274,7 @@ def regret_BECCS(
                 costs += TECH.CAPEX / 2  # [MEUR]
 
             # Adding OPEX and revenues
-            if t > timing + 1 and invested and not Denial:
+            if t > timing + 1 and invested:
 
                 # Calculate operational costs and revenues
                 costs += TECH.Qfuel * TECH.operating * cbio * 10**-6  # Biomass fuel costs

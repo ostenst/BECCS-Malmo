@@ -41,7 +41,7 @@ def filter_by_decision(experiments, outcomes, decision_values):
 
 def classify(data):
     # Get the regret_ref outcome
-    result = data["regret_2"]
+    result = data["regret_1"]
     classes = result > 0
     return classes
 
@@ -133,42 +133,39 @@ if __name__ == "__main__":
     bool_columns = experiments.select_dtypes(include=["bool"]).columns
     experiments[bool_columns] = experiments[bool_columns].astype(int)
 
-    if 'decision' in experiments.columns:
-        experiments = pd.get_dummies(experiments, columns=['decision'], drop_first=False)
-        decision_columns = [col for col in experiments.columns if col.startswith('decision')] 
-        experiments[decision_columns] = experiments[decision_columns].astype(int)
-
+    results = (experiments, outcomes)
     print(experiments.head())
     print(outcomes.head())
 
-    # # Let's filter the data based on the decision of interest (edit) not needed?
-    # experiments, outcomes = filter_by_decision(experiments, outcomes, decision_values=["ref"]) # Specify what decision to mine
-    results = (experiments, outcomes)
+    # What is the initial density?
+    n_zeroregret, n_regret = count_classifications(outcomes, classify)
+    print("density = ", round(n_zeroregret / (n_zeroregret + n_regret)*100), "%")
 
-    regret_zero = (outcomes["regret_2"] > 0).sum()
-    print(f" - Rows where regret_2 > 0: {regret_zero}")
+    regret_zero = (outcomes["regret_1"] > 0).sum()
+    print(f" - Rows where regret_1 > 0: {regret_zero}")
 
+    # What is the density after filtering?
+    feature_limits = {
+        "Auction": 0,           # Auction must be False (converted to 0 earlier)
+        "Integration": 1, 
+        "crc": (None, 100)      # CRC must be less than 100
+    }
+    for key, val in feature_limits.items():
+        if isinstance(val, tuple):
+            min_val = -float("inf") if val[0] is None else val[0]
+            max_val = float("inf") if val[1] is None else val[1]
+            feature_limits[key] = (min_val, max_val)
+
+    filtered_experiments, filtered_outcomes = filter_by_feature_limits((experiments, outcomes), feature_limits)
+    n_zeroregret, n_regret = count_classifications(filtered_outcomes, classify)
+    print("density = ", round(n_zeroregret / (n_zeroregret + n_regret)*100), "%")
+    
+    # Run CART on filtered data
+    results = (filtered_experiments, filtered_outcomes)
     cart_alg = cart.setup_cart(results, classify, mass_min=0.05)
     cart_alg.build_tree()
     df = cart_alg.boxes_to_dataframe()
     cart_alg.show_tree()
-    # # cart_alg.show_boxes(together=False)
-    # for col in df.columns:
-    #     print(f"\n===== Column: {col} =====")
-    #     print(df[col])  # Print all values in the column
-    # print("\nFirst 5 rows of the DataFrame:")
-    # print(df.head())
 
-    # Analyze a box by filtering the experiments
-    # filtered_experiments, filtered_outcomes = filter_by_box(results, df, "box 12")
-    print("\nThe below rows don't do much?")
-    feature_limits = {
-        "crc": (0, 203), 
-        "Auction": 0,       
-        # "Bioshortage": 0,
-    }
-    filtered_experiments, filtered_outcomes = filter_by_feature_limits(results, feature_limits)
-    n_zeroregret, n_regret = count_classifications(filtered_outcomes, classify)
-    print("density = ", round(n_zeroregret / (n_zeroregret + n_regret)*100), "%")
-
+    print("Maybe combine cap+procure into 1 parameter - it gets too diluted otherwise!")
     plt.show()

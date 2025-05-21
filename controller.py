@@ -60,10 +60,11 @@ model.uncertainties = [
     CategoricalParameter("Auction", [True, False]),
     # CategoricalParameter("Denial", [True, False]),
     CategoricalParameter("Integration", [True, False]),
-    CategoricalParameter("Capping", [True, False]),
+    # CategoricalParameter("Capping", [True, False]),
     CategoricalParameter("Procurement", [True, False]),
     CategoricalParameter("Time", ["Baseline", "Downtime", "Uptime"]),
 ]
+print("Need to re-run the controller after implementing Procure/Capping variables ... next revision!")
 
 model.levers = [
     # CategoricalParameter("decision", ["ref", "amine", "oxy", "clc"]),
@@ -111,7 +112,6 @@ print(outcomes_df)
 subsets = {
     "All Data": outcomes_df,
     "Time = Downtime": outcomes_df[outcomes_df["Time"] == "Downtime"],
-    # "Auction = False": outcomes_df[outcomes_df["Auction"] == False],
     "Auction = False and Time = Downtime": outcomes_df[
         (outcomes_df["Auction"] == False) & (outcomes_df["Time"] == "Downtime")
     ]
@@ -120,40 +120,60 @@ subsets = {
 # Set up color mapping
 regret_col = "regret_1"
 cmap = cm.RdYlGn_r
-# cmap = cm.seismic
-# cmap = cm.Spectral_r
-# cmap = cm.Reds
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
 ymin, ymax = -800, 800
 
-# Loop over each subset
-for title_suffix, subset in subsets.items():
+# Prepare data for plotting (reversed order)
+plot_data = []
+box_colors = []
+labels = ["3", "2", "1"]  # Reversed labels to match reversed plotting order
 
+# Reverse the subset order
+for subset in reversed(list(subsets.values())):
+    plot_data.append(subset[regret_col])
     regret_freq = (subset[regret_col] > 0).mean()
-    box_color = cmap(regret_freq)
+    box_colors.append(cmap(regret_freq))
 
-    fig, ax = plt.subplots(figsize=(3.5, 10))
-    sns.boxplot(data=subset, y=regret_col, color=box_color, ax=ax)
-    ax.axhline(0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
+# Plot
+fig, ax = plt.subplots(figsize=(10, 4.5))  # Horizontal layout
 
-    # Set fixed y-limits
-    ax.set_ylim(ymin, ymax)
+positions = [1, 2, 3]  # Position still 1-3, just reversed data
+box = ax.boxplot(
+    plot_data,
+    patch_artist=True,
+    labels=labels,
+    positions=positions,
+    widths=0.8,
+    vert=False  # Horizontal boxes
+)
 
-    ax.set_title(f"Regret Distribution for '{regret_col}'\n{title_suffix} (Color = {int(regret_freq*100)}% Regret > 0)")
-    ax.set_ylabel("Regret")
-    ax.set_xlabel("")
+# Color boxes and fix median lines
+for patch, color in zip(box['boxes'], box_colors):
+    patch.set_facecolor(color)
+for median in box['medians']:
+    median.set_color('black')
+    median.set_linewidth(2)
 
-    # Colorbar
-    sm = cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02, shrink=0.8)
-    cbar.set_label("% of Regret > 0", rotation=270, labelpad=15)
-    cbar.ax.set_yticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
+# Vertical line at 0
+ax.axvline(0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
 
-    plt.tight_layout()
-    filename = f"regret_1_{title_suffix.replace(' ', '_').replace('=', '')}.png"
-    plt.savefig(filename, dpi=600)
+# X-axis and font styling
+ax.set_xlim(ymin, ymax)
+ax.set_xlabel("Regret", fontsize=13)
+ax.set_title(f"Regret Distribution for '{regret_col}'", fontsize=15)
+ax.tick_params(axis='both', labelsize=11)
+
+# Colorbar with thicker width
+sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+sm.set_array([])
+cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02, shrink=1.0, aspect=25)  # Thicker via `aspect`
+cbar.set_label("% of Regret > 0", rotation=270, labelpad=20, fontsize=13)
+cbar.ax.tick_params(labelsize=11)
+cbar.ax.set_yticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
+
+plt.tight_layout()
+plt.savefig("regret_1.png", dpi=600)
 
 ## ------------------ PLOTTING REGRET_2 ------------------ ##
 # Define the subsets
@@ -169,40 +189,60 @@ subsets = {
 # Set up color mapping
 regret_col = "regret_2"
 cmap = cm.RdYlGn_r
-# cmap = cm.seismic
-# cmap = cm.Spectral_r
-# cmap = cm.Reds
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
 ymin, ymax = -250, 250
 
-# Loop over each subset
-for title_suffix, subset in subsets.items():
+# Prepare data for plotting (reversed order)
+plot_data = []
+box_colors = []
+labels = ["3", "2", "1"]  # Reversed labels to match reversed plotting order
 
+# Reverse the subset order
+for subset in reversed(list(subsets.values())):
+    plot_data.append(subset[regret_col])
     regret_freq = (subset[regret_col] > 0).mean()
-    box_color = cmap(regret_freq)
+    box_colors.append(cmap(regret_freq))
 
-    fig, ax = plt.subplots(figsize=(3.5, 10))
-    sns.boxplot(data=subset, y=regret_col, color=box_color, ax=ax)
-    ax.axhline(0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
+# Plot
+fig, ax = plt.subplots(figsize=(10, 4.5))  # Horizontal layout
 
-    # Set fixed y-limits
-    ax.set_ylim(ymin, ymax)
+positions = [1, 2, 3]  # Position still 1-3, just reversed data
+box = ax.boxplot(
+    plot_data,
+    patch_artist=True,
+    labels=labels,
+    positions=positions,
+    widths=0.8,
+    vert=False  # Horizontal boxes
+)
 
-    ax.set_title(f"Regret Distribution for '{regret_col}'\n{title_suffix} (Color = {int(regret_freq*100)}% Regret > 0)")
-    ax.set_ylabel("Regret")
-    ax.set_xlabel("")
+# Color boxes and fix median lines
+for patch, color in zip(box['boxes'], box_colors):
+    patch.set_facecolor(color)
+for median in box['medians']:
+    median.set_color('black')
+    median.set_linewidth(2)
 
-    # Colorbar
-    sm = cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02, shrink=0.8)
-    cbar.set_label("% of Regret > 0", rotation=270, labelpad=15)
-    cbar.ax.set_yticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
+# Vertical line at 0
+ax.axvline(0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
 
-    plt.tight_layout()
-    filename = f"regret_2_{title_suffix.replace(' ', '_').replace('=', '')}.png"
-    plt.savefig(filename, dpi=600)
+# X-axis and font styling
+ax.set_xlim(ymin, ymax)
+ax.set_xlabel("Regret", fontsize=13)
+ax.set_title(f"Regret Distribution for '{regret_col}'", fontsize=15)
+ax.tick_params(axis='both', labelsize=11)
+
+# Colorbar with thicker width
+sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+sm.set_array([])
+cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02, shrink=1.0, aspect=25)  # Thicker via `aspect`
+cbar.set_label("% of Regret > 0", rotation=270, labelpad=20, fontsize=13)
+cbar.ax.tick_params(labelsize=11)
+cbar.ax.set_yticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
+
+plt.tight_layout()
+plt.savefig("regret_2.png", dpi=600)
 
 ## ------------------ PLOTTING REGRET_3 ------------------ ##
 # Define the subsets
@@ -221,39 +261,82 @@ subsets = {
 # Set up color mapping
 regret_col = "regret_3"
 cmap = cm.RdYlGn_r
-# cmap = cm.seismic
-# cmap = cm.Spectral_r
-# cmap = cm.Reds
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
 ymin, ymax = -250, 250
 
-# Loop over each subset
-for title_suffix, subset in subsets.items():
+# Prepare data for plotting (reversed order)
+plot_data = []
+box_colors = []
+labels = ["3", "2", "1"]  # Reversed labels to match reversed plotting order
 
+# Reverse the subset order
+for subset in reversed(list(subsets.values())):
+    plot_data.append(subset[regret_col])
     regret_freq = (subset[regret_col] > 0).mean()
-    box_color = cmap(regret_freq)
+    box_colors.append(cmap(regret_freq))
 
-    fig, ax = plt.subplots(figsize=(3.5, 10))
-    sns.boxplot(data=subset, y=regret_col, color=box_color, ax=ax)
-    ax.axhline(0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
+# Plot
+fig, ax = plt.subplots(figsize=(10, 4.5))  # Horizontal layout
 
-    # Set fixed y-limits
-    ax.set_ylim(ymin, ymax)
+positions = [1, 2, 3]  # Position still 1-3, just reversed data
+box = ax.boxplot(
+    plot_data,
+    patch_artist=True,
+    labels=labels,
+    positions=positions,
+    widths=0.8,
+    vert=False  # Horizontal boxes
+)
 
-    ax.set_title(f"Regret Distribution for '{regret_col}'\n{title_suffix} (Color = {int(regret_freq*100)}% Regret > 0)")
-    ax.set_ylabel("Regret")
-    ax.set_xlabel("")
+# Color boxes and fix median lines
+for patch, color in zip(box['boxes'], box_colors):
+    patch.set_facecolor(color)
+for median in box['medians']:
+    median.set_color('black')
+    median.set_linewidth(2)
 
-    # Colorbar
-    sm = cm.ScalarMappable(cmap=cmap, norm=norm)
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02, shrink=0.8)
-    cbar.set_label("% of Regret > 0", rotation=270, labelpad=15)
-    cbar.ax.set_yticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
+# Vertical line at 0
+ax.axvline(0, color='gray', linestyle='--', linewidth=1.2, alpha=0.6)
 
-    plt.tight_layout()
-    filename = f"regret_3_{title_suffix.replace(' ', '_').replace('=', '')}.png"
-    plt.savefig(filename, dpi=600)
+# X-axis and font styling
+ax.set_xlim(ymin, ymax)
+ax.set_xlabel("Regret", fontsize=13)
+ax.set_title(f"Regret Distribution for '{regret_col}'", fontsize=15)
+ax.tick_params(axis='both', labelsize=11)
+
+# Colorbar with thicker width
+sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+sm.set_array([])
+cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02, shrink=1.0, aspect=25)  # Thicker via `aspect`
+cbar.set_label("% of Regret > 0", rotation=270, labelpad=20, fontsize=13)
+cbar.ax.tick_params(labelsize=11)
+cbar.ax.set_yticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
+
+plt.tight_layout()
+plt.savefig("regret_3.png", dpi=600)
+
+
+## ------------- SEPARATE COLORBAR -------------
+# Use the exact same colormap and normalization from the boxplot
+cmap = cm.RdYlGn_r
+norm = mcolors.Normalize(vmin=0, vmax=1)
+
+# Create separate figure for colorbar
+fig, ax = plt.subplots(figsize=(1.5, 6))  # Adjust width and height as needed
+
+# ScalarMappable to link color map and normalization
+sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+sm.set_array([])  # Required even if we don’t use it for plotting data
+
+# Create colorbar
+cbar = fig.colorbar(sm, cax=ax, orientation="vertical")
+cbar.set_label("% of Regret > 0", rotation=270, labelpad=20, fontsize=14)
+cbar.ax.tick_params(labelsize=12)
+
+# Set ticks as percentage labels
+cbar.set_ticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+cbar.ax.set_yticklabels([f"{int(t * 100)}%" for t in cbar.get_ticks()])
+plt.tight_layout()
 
 plt.show()

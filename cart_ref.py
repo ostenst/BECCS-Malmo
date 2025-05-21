@@ -148,7 +148,7 @@ if __name__ == "__main__":
     feature_limits = {
         "Auction": 0,           # Auction must be False (converted to 0 earlier)
         "Integration": 1, 
-        "crc": (None, 100)      # CRC must be less than 100
+        # "crc": (None, 120)      # CRC must be less than 100
     }
     for key, val in feature_limits.items():
         if isinstance(val, tuple):
@@ -159,6 +159,7 @@ if __name__ == "__main__":
     filtered_experiments, filtered_outcomes = filter_by_feature_limits((experiments, outcomes), feature_limits)
     n_zeroregret, n_regret = count_classifications(filtered_outcomes, classify)
     print("density = ", round(n_zeroregret / (n_zeroregret + n_regret)*100), "%")
+    print(filtered_experiments.head())
     
     # Run CART on filtered data
     results = (filtered_experiments, filtered_outcomes)
@@ -167,5 +168,4 @@ if __name__ == "__main__":
     df = cart_alg.boxes_to_dataframe()
     cart_alg.show_tree()
 
-    print("Maybe combine cap+procure into 1 parameter - it gets too diluted otherwise!")
     plt.show()

@@ -82,7 +82,7 @@ def regret_BECCS(
     Auction = False,      # True if additional revenue from CRC is added
     # Denial = False,
     Integration = True,  
-    Capping = True,
+    # Capping = True,
     Procurement = True, 
     Time = "Baseline",
 
@@ -252,15 +252,15 @@ def regret_BECCS(
                 celc *= 1.20
             if Integration:
                 # Increase ETS prices
-                if not Capping:
+                if not Procurement:
                     ETS += EUA
-                elif Capping and ETS < ceiling:
+                elif Procurement and ETS < ceiling:
                     ETS += EUA
 
                 # Determine the best CRC price
                 if ETS > crc:   
                     crc = ETS
-                if ceiling > crc and Capping and Procurement:
+                if ceiling > crc and Procurement:
                     crc = ceiling
 
             # Adding CAPEX

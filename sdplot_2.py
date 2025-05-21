@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import qmc
+from matplotlib.lines import Line2D
 
 # Load and merge
 experiments = pd.read_csv("experiments.csv")
@@ -14,7 +15,7 @@ data = data[(data["Integration"] == True) & (data["Auction"] == False) & (data["
 
 # Bin the filtered data where "Procurement" == False
 data_density = data[data["Procurement"] == False].reset_index(drop=True)
-num_bins = 8
+num_bins = 12
 data_density["EUA_bin"] = pd.cut(data_density["EUA"], bins=num_bins)
 regret_fraction = (
     data_density.groupby("EUA_bin")["regret_1"]
@@ -23,12 +24,11 @@ regret_fraction = (
 bin_centers = data_density.groupby("EUA_bin")["EUA"].mean()
 
 # Latin Hypercube Sampling (20%)
-sample_size = int(len(data) * 0.2)
+sample_size = int(len(data) * 0.085)
 lhs = qmc.LatinHypercube(d=1)
 sample = lhs.random(n=sample_size)
 sample_indices = (sample * len(data)).astype(int).flatten()
 data_lhs = data.iloc[sample_indices].reset_index(drop=True)
-data_lhs = data # NOTE testing all data!
 
 # Assign colors based on conditions
 def assign_color(row):
@@ -46,26 +46,33 @@ data_lhs["color"] = data_lhs.apply(assign_color, axis=1)
 # Plotting
 fig, ax = plt.subplots(figsize=(8, 6))
 
-# Plot Auction == False (deepskyblue)
-subset_deepskyblue = data_lhs[data_lhs["color"] == "deepskyblue"]
-ax.scatter(
-    subset_deepskyblue["EUA"],
-    subset_deepskyblue["regret_1"],
-    color="deepskyblue",
-    s=60,
-    alpha=0.08,
-    label="Procurement = False"
-)
+# # Plot Auction == False (deepskyblue)
+# subset_deepskyblue = data_lhs[data_lhs["color"] == "deepskyblue"]
+# ax.scatter(
+#     subset_deepskyblue["EUA"],
+#     subset_deepskyblue["regret_1"],
+#     color="deepskyblue",
+#     s=40,
+#     alpha=0.08,
+#     label="Procurement = False"
+# )
 
-# Plot Auction == True (gray)
-subset_gray = data_lhs[data_lhs["color"] == "gray"]
+# # Plot Auction == True (gray)
+# subset_gray = data_lhs[data_lhs["color"] == "gray"]
+# ax.scatter(
+#     subset_gray["EUA"],
+#     subset_gray["regret_1"],
+#     color="gray",
+#     s=40,
+#     alpha=0.08,
+#     label="Procurement = True"
+# )
 ax.scatter(
-    subset_gray["EUA"],
-    subset_gray["regret_1"],
-    color="gray",
-    s=60,
-    alpha=0.08,
-    label="Procurement = True"
+    data_lhs["EUA"],
+    data_lhs["regret_1"],
+    color=data_lhs["color"],
+    alpha=0.2,
+    label=None  # We'll handle the legend separately
 )
 
 # Overlay: highlight with distinct edge
@@ -76,12 +83,21 @@ ax.scatter(
     facecolors='none',
     edgecolors='black',
     linewidths=0.6,
-    s=60,
-    alpha=0.40,
+    s=40,
+    alpha=0.30,
     label="EUA < 4.6 & Procurement = False"
 )
 
-ax.legend(loc="lower left", fontsize=10, title="Point Categories", title_fontsize=10)
+legend_elements = [
+    Line2D([0], [0], marker='o', color='w', label='ti',
+           markerfacecolor='deepskyblue', markersize=8, alpha=1.0),
+    Line2D([0], [0], marker='o', color='w', label='im',
+       markerfacecolor='deepskyblue', markeredgecolor='black', markersize=8, markeredgewidth=0.6),
+    Line2D([0], [0], marker='o', color='w', label='ti',
+           markerfacecolor='gray', markersize=8, alpha=0.6),
+]
+
+ax.legend(handles=legend_elements, loc="lower left", fontsize=10)
 
 # Formatting
 ax.axhline(0, color='black', linestyle='--', linewidth=1.0, alpha=0.8)
@@ -94,17 +110,17 @@ ax.tick_params(labelsize=10)
 ax2 = ax.twinx()
 ax2.plot(
     bin_centers,
-    regret_fraction,
+    regret_fraction*100,
     linestyle="-",
     marker="D",
     markerfacecolor="white",     # Fill color
-    markeredgecolor="deepskyblue",   # Outline color
+    markeredgecolor="steelblue",   # Outline color
     markeredgewidth=1.5,
-    color="deepskyblue",
+    color="steelblue",
     label="Fraction with Regret > 0"
 )
 ax2.set_ylabel("Fraction Regret > 0", fontsize=12)
-ax2.set_ylim(0, 1)
+ax2.set_ylim(0, 100)
 ax2.tick_params(axis='y', labelsize=10)
 
 # Optional legend for overlay line

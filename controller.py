@@ -89,8 +89,8 @@ model.outcomes = [
 # ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
-n_scenarios = 1000
-n_policies = 100
+n_scenarios = 5000
+n_policies = 200
 # Regular LHS sampling:
 results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.LHS, lever_sampling = Samplers.LHS)
 experiments, outcomes = results

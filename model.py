@@ -144,12 +144,17 @@ def regret_BECCS(
     Qar = dHox * O2oc           #[MW]
     Qfr = dHred * O2oc
     Qoxy = LHVO2 * O2oxy
-    # print("CLC heat summarizes to: ", sum([Qar, Qfr, Qoxy]) - Qfuel)
+    print("CLC heat summarizes to: ", sum([Qar, Qfr, Qoxy]) - Qfuel)
+    print(Qar)
+    print(Qfr)
+    print(Qoxy)
+    print(Qfuel)
 
     mCO2 = 1.0105 * mfuel               #[kgCO2/s]
     mH2O = 0.7416 * mfuel               #[kgH2O/s]
     mfluegas = mCO2 + mH2O + O2oxy*32   #[kg/s], inside the post-oxidation chamber (incl. O2oxy)
     mash = 0.01375*mfuel
+    print(mfluegas)
  
     P = REF.P
     Pasu = Wasu/1000*O2oxy*32           #[MW] 
@@ -171,8 +176,8 @@ def regret_BECCS(
     memitted = mCO2 * (1-rate)
     OXY = ConversionTech("oxy", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating+operating_increase)
 
-    # for tech in [REF,AMINE,OXY,CLC]:
-    #     tech.print()
+    for tech in [REF,AMINE,OXY,CLC]:
+        tech.print()
 
     ### -------------- CALCULATING COSTS AND NPV ------------- ###
     # Calculating CAPEX per item [MEUR]:
@@ -190,6 +195,10 @@ def regret_BECCS(
         'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  #Assuming that Deng had cost year = 2019 NOTE: unclear if installation 1.3 should be included or not? NOTE: Kjästad estimates CL cost in SKEPPKOSTNAD excel?
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2, #Function from Judit, 4000m3 from Ramboll, CEPCI from Google
     }
+    for item, cost in CLC.shopping_list.items():
+        print(f"{item}: {cost:.2f}")
+
+    print(" HEAT CONVECTIVE PASS NEEDED")
     OXY.shopping_list = {
         'ASU' : 0.02*(59)**0.067/((1-0.95)**0.073) * (O2demand*1000*3600/453.592)**cASU *usd * CEPCI/499.6 *1.3,
         'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  
@@ -203,6 +212,7 @@ def regret_BECCS(
     # Escalating CAPEX of CLC and OXY
     initial_items = ['FR', 'cyclone', 'POC', 'ASU', 'OCash',] # These should have an additional contingency
     delayed_items = ['CL', 'interim']
+    print(" ASU OF CLC IS DEPLOYED EARLY - NO IT SHOULD BE DELAYED!!! --- and add 25% HEX CONVECTIONSTRÅK AFTER FR <- a signifcant cost, Magnus thinks")
 
     BEC =  sum(value for key, value in CLC.shopping_list.items() if key in initial_items)
     EPCC = BEC*(1 + EPC) # To harmonize with Ramboll amine costs

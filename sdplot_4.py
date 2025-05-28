@@ -66,7 +66,7 @@ fig, ax = plt.subplots(figsize=(8, 6))
 # )
 # Single scatter call with per-point color from 'color' column
 ax.scatter(
-    data_lhs["immature"],
+    data_lhs["immature"]*100,
     data_lhs["regret_3"],
     color=data_lhs["color"],
     alpha=0.4,
@@ -76,7 +76,7 @@ ax.scatter(
 # Overlay: highlight with distinct edge
 overlay = data_lhs[((data_lhs["timing"] == 5) | (data_lhs["timing"] == 10)) & (data_lhs["immature"] < 1.77)]
 ax.scatter(
-    overlay["immature"],
+    overlay["immature"]*100,
     overlay["regret_3"],
     facecolors='none',
     edgecolors='black',
@@ -107,7 +107,7 @@ ax.tick_params(labelsize=10)
 # Plot DENSITY on secondary y-axis
 ax2 = ax.twinx()
 ax2.plot(
-    bin_centers,
+    bin_centers*100,
     regret_fraction*100,
     linestyle="-",
     marker="D",

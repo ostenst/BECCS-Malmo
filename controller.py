@@ -89,8 +89,8 @@ model.outcomes = [
 # ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
-n_scenarios = 5000
-n_policies = 200
+n_scenarios = 500
+n_policies = 20
 # Regular LHS sampling:
 results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.LHS, lever_sampling = Samplers.LHS)
 experiments, outcomes = results
@@ -120,6 +120,7 @@ subsets = {
 # Set up color mapping
 regret_col = "regret_1"
 cmap = cm.RdYlGn_r
+cmap = cm.coolwarm
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
 ymin, ymax = -800, 800
@@ -189,6 +190,7 @@ subsets = {
 # Set up color mapping
 regret_col = "regret_2"
 cmap = cm.RdYlGn_r
+cmap = cm.coolwarm
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
 ymin, ymax = -250, 250
@@ -261,6 +263,7 @@ subsets = {
 # Set up color mapping
 regret_col = "regret_3"
 cmap = cm.RdYlGn_r
+cmap = cm.coolwarm
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
 ymin, ymax = -250, 250
@@ -320,10 +323,11 @@ plt.savefig("regret_3.png", dpi=600)
 ## ------------- SEPARATE COLORBAR -------------
 # Use the exact same colormap and normalization from the boxplot
 cmap = cm.RdYlGn_r
+cmap = cm.coolwarm
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
 # Create separate figure for colorbar
-fig, ax = plt.subplots(figsize=(1.5, 6))  # Adjust width and height as needed
+fig, ax = plt.subplots(figsize=(2, 6))  # Adjust width and height as needed
 
 # ScalarMappable to link color map and normalization
 sm = cm.ScalarMappable(cmap=cmap, norm=norm)

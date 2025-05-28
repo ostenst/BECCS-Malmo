@@ -38,7 +38,7 @@ model.uncertainties = [
     # RealParameter("usd", 0.90, 1.00),
     RealParameter("ctrans", 554, 755),        # SEK/tCO2, Kjärstad @Gävle 555nm, INCLUDES C&L???
     RealParameter("cstore", 201, 496),        # SEK/tCO2, Kjärstad @NL, calculate by total_system - only_transport
-    RealParameter("crc", 50, 300),          # Reference cost
+    RealParameter("crc", 25, 300),          # Reference cost
     RealParameter("cmea", 25, 35),         # SEK/kg, Ramboll
     RealParameter("coc", 200, 600),         # EUR/t, Magnus/Felicia
 
@@ -52,7 +52,7 @@ model.uncertainties = [
     RealParameter("overrun", 0.00, 0.45),           #Beiron FOAK=NOAK costs
     RealParameter("immature", 0.00, 3.00),       
 
-    RealParameter("EUA", 5, 10),    # +ETS increases
+    RealParameter("EUA", 0, 10),    # +ETS increases
     RealParameter("ceiling", 200, 350),
 
     CategoricalParameter("Bioshortage", [True, False]),
@@ -60,7 +60,7 @@ model.uncertainties = [
     CategoricalParameter("Auction", [True, False]),
     # CategoricalParameter("Denial", [True, False]),
     CategoricalParameter("Integration", [True, False]),
-    CategoricalParameter("Capping", [True, False]),
+    # CategoricalParameter("Capping", [True, False]),
     CategoricalParameter("Procurement", [True, False]),
     CategoricalParameter("Time", ["Baseline", "Downtime", "Uptime"]),
 
@@ -84,7 +84,7 @@ model.outcomes = [
 ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
-n_scenarios = 2000
+n_scenarios = 3000
 n_policies = 0
 
 # If Sobol sampling:
@@ -107,7 +107,7 @@ def analyze(results, ooi):
         sobol_indices["S2_conf"], index=problem["names"], columns=problem["names"]
     )
     return sobol_stats, s2, s2_conf, problem
-sobol_stats, s2, s2_conf, problem = analyze(results, "regret_3")
+sobol_stats, s2, s2_conf, problem = analyze(results, "regret_2")
 print(sobol_stats)
 print(s2)
 print(s2_conf)
@@ -174,13 +174,13 @@ for i in range(n):
 ax.scatter(x, y, s=ST_scaled, color='crimson', alpha=1.0, edgecolor='none')
 
 # Overlay S1 nodes (on top)
-ax.scatter(x, y, s=S1_scaled, color='deepskyblue', alpha=1.0, edgecolor='none')
+ax.scatter(x, y, s=S1_scaled, color='lightpink', alpha=1.0, edgecolor='none')
 
 # Add labels
 for i in range(n):
     ax.text(x[i]*1.5, y[i]*1.5, labels[i], ha='center', va='center', fontsize=7)
     if ST[i] > 0.08:
-        ax.text(x[i], y[i], round(ST[i],2), color='midnightblue', ha='center', va='center', fontsize=7)
+        ax.text(x[i], y[i], round(ST[i],2), color='black', ha='center', va='center', fontsize=7)
 
 circle = plt.Circle((0, 0), 1.2, color='black', fill=False, linewidth=1.0, zorder=10)
 ax.add_patch(circle)

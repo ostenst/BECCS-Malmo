@@ -47,6 +47,8 @@ def regret_BECCS(
     #Uncertainties:
     O2eff = 0.90,        #[-] for CLC
     Wasu = 230*3.6,      #[MJ/tO2], ref. is the macroscopic study
+    dTmin = 10,
+    U = 1500, 
 
     operating = 4500,
     dr=0.075,
@@ -144,17 +146,12 @@ def regret_BECCS(
     Qar = dHox * O2oc           #[MW]
     Qfr = dHred * O2oc
     Qoxy = LHVO2 * O2oxy
-    print("CLC heat summarizes to: ", sum([Qar, Qfr, Qoxy]) - Qfuel)
-    print(Qar)
-    print(Qfr)
-    print(Qoxy)
-    print(Qfuel)
+    # print("CLC heat summarizes to: ", sum([Qar, Qfr, Qoxy]) - Qfuel)
 
     mCO2 = 1.0105 * mfuel               #[kgCO2/s]
     mH2O = 0.7416 * mfuel               #[kgH2O/s]
     mfluegas = mCO2 + mH2O + O2oxy*32   #[kg/s], inside the post-oxidation chamber (incl. O2oxy)
     mash = 0.01375*mfuel
-    print(mfluegas)
  
     P = REF.P
     Pasu = Wasu/1000*O2oxy*32           #[MW] 
@@ -165,6 +162,8 @@ def regret_BECCS(
     Vfluegas = mfuel*(2.342 + 4.203)   #[Nm3/s] assuming no O2 in this flue gas... slightly inconsistent with mfluegas
     Across = Vfluegas/5.5                   # Assumed 5.5m/s from Judit
     Afr = 1300/20 * Across                  # Scaled linearly from Anders
+
+    Ahex = Qoxy*10**6/(U*dTmin)
     CLC = ConversionTech("clc", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating+operating_increase)
     CLC.mfluegas = mfluegas
 
@@ -176,8 +175,8 @@ def regret_BECCS(
     memitted = mCO2 * (1-rate)
     OXY = ConversionTech("oxy", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating+operating_increase)
 
-    for tech in [REF,AMINE,OXY,CLC]:
-        tech.print()
+    # for tech in [REF,AMINE,OXY,CLC]:
+    #     tech.print()
 
     ### -------------- CALCULATING COSTS AND NPV ------------- ###
     # Calculating CAPEX per item [MEUR]:
@@ -187,18 +186,18 @@ def regret_BECCS(
         'amines' : cAM*sek * AMINE.mcaptured/16.6, # assuming a linear relationship between mcaptured and CAPEX... Let's remove the CL capex cost:
     }
     CLC.shopping_list = {
-        'FR' : 4.98*(Afr/1531)**cFR*usd * CEPCI/585.7 *1.4, 
+        'FR' : 4.98*(Afr/1531)**cFR*usd * CEPCI/585.7 *1.4, # constants are "installation factors" from Macroscopic
         'cyclone' : 0.345*( 3 )*usd * CEPCI/576.1 *1.4, 
         'POC' : ( 48.67*10**-6*(CLC.mfluegas) * (1 + np.exp(0.018*(850+273.15)-26.4)) * 1/(0.995-0.98) )*usd * CEPCI/585.7 *1.3,
         'ASU' : 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*1000*3600/453.592)**cASU *usd * CEPCI/499.6 *1.3,
         'OCash' : (4.6*(mash/6.7)**0.56)*usd * CEPCI/603.1 *1.2,
         'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  #Assuming that Deng had cost year = 2019 NOTE: unclear if installation 1.3 should be included or not? NOTE: Kjästad estimates CL cost in SKEPPKOSTNAD excel?
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2, #Function from Judit, 4000m3 from Ramboll, CEPCI from Google
+        'HEX' :  (2.8626 * Ahex ** 0.7988)/1000 * CEPCI/576.1 *1.3 # Biermann 2022 Appendix is source! He uses kEUR so divide by 1000 to get MEUR
     }
-    for item, cost in CLC.shopping_list.items():
-        print(f"{item}: {cost:.2f}")
+    # for item, cost in CLC.shopping_list.items():
+    #     print(f"{item}: {cost:.2f}")
 
-    print(" HEAT CONVECTIVE PASS NEEDED")
     OXY.shopping_list = {
         'ASU' : 0.02*(59)**0.067/((1-0.95)**0.073) * (O2demand*1000*3600/453.592)**cASU *usd * CEPCI/499.6 *1.3,
         'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  
@@ -210,9 +209,8 @@ def regret_BECCS(
     AMINE.CAPEX = AMINE.shopping_list["amines"]*(1 + overrun)
 
     # Escalating CAPEX of CLC and OXY
-    initial_items = ['FR', 'cyclone', 'POC', 'ASU', 'OCash',] # These should have an additional contingency
-    delayed_items = ['CL', 'interim']
-    print(" ASU OF CLC IS DEPLOYED EARLY - NO IT SHOULD BE DELAYED!!! --- and add 25% HEX CONVECTIONSTRÅK AFTER FR <- a signifcant cost, Magnus thinks")
+    initial_items = ['FR', 'cyclone', 'OCash',]
+    delayed_items = ['CL', 'POC', 'ASU', 'interim']
 
     BEC =  sum(value for key, value in CLC.shopping_list.items() if key in initial_items)
     EPCC = BEC*(1 + EPC) # To harmonize with Ramboll amine costs
@@ -223,7 +221,8 @@ def regret_BECCS(
     BEC =  sum(value for key, value in CLC.shopping_list.items() if key in delayed_items)
     EPCC = BEC*(1 + EPC)
     TPC = EPCC*(1 + contingencies)
-    CLC.CAPEX = TPC*(1 + ownercost)*(1 + overrun)
+    TOC = TPC*(1 + ownercost)
+    CLC.CAPEX = TOC*(1 + immature)*(1 + overrun)
 
     BEC =  sum(OXY.shopping_list.values())
     EPCC = BEC*(1 + EPC) # To harmonize with Ramboll amine costs
@@ -346,5 +345,3 @@ if __name__ == "__main__":
     print("amine vs. ref regret=", dict["regret_1"])
     print("amine vs. oxy regret=", dict["regret_2"])
     print("amine vs. clc regret=", dict["regret_3"])
-
-    print("\n I am only missing EU ETS integration scenarios! :) And T&S maybe")

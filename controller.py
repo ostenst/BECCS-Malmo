@@ -25,7 +25,9 @@ model = Model("BECCSMalmo", function=regret_BECCS)
 
 model.uncertainties = [
     RealParameter("O2eff", 0.85, 0.95),     # [-] for CLC
-    RealParameter("Wasu", 800, 900),        # MJ/tO2 (converted from 230*3.6, Macroscopic or Lyngfelt or Ramboll)
+    RealParameter("dTmin", 8, 12),          # [-] Tharun PlantSystem
+    RealParameter("U", 1200, 1800),         # [-] Biermann 2022
+    # RealParameter("Wasu", 800, 900),        # MJ/tO2 (converted from 230*3.6, Macroscopic or Lyngfelt or Ramboll)
 
     RealParameter("operating", 4000, 5000), # Operating hours
     RealParameter("dr", 0.05, 0.10),        # Discount rate
@@ -64,7 +66,6 @@ model.uncertainties = [
     CategoricalParameter("Procurement", [True, False]),
     CategoricalParameter("Time", ["Baseline", "Downtime", "Uptime"]),
 ]
-print("Need to re-run the controller after implementing Procure/Capping variables ... next revision!")
 
 model.levers = [
     # CategoricalParameter("decision", ["ref", "amine", "oxy", "clc"]),
@@ -89,8 +90,8 @@ model.outcomes = [
 # ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
-n_scenarios = 500
-n_policies = 20
+n_scenarios = 5000
+n_policies = 200
 # Regular LHS sampling:
 results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.LHS, lever_sampling = Samplers.LHS)
 experiments, outcomes = results

@@ -74,7 +74,7 @@ ax.scatter(
 )
 
 # Overlay: highlight with distinct edge
-overlay = data_lhs[((data_lhs["timing"] == 5) | (data_lhs["timing"] == 10)) & (data_lhs["immature"] < 1.77)]
+overlay = data_lhs[((data_lhs["timing"] == 5) | (data_lhs["timing"] == 10)) & (data_lhs["immature"] < 1.27)]
 ax.scatter(
     overlay["immature"]*100,
     overlay["regret_3"],
@@ -83,15 +83,15 @@ ax.scatter(
     linewidths=0.6,
     s=40,
     alpha=0.50,
-    label="immature < 1.77 & timing < 12.5"
+    label="immature < 1.27 & timing < 12.5"
 )
 
 legend_elements = [
-    Line2D([0], [0], marker='o', color='w', label='ti',
+    Line2D([0], [0], marker='o', color='w', label='Early investments',
            markerfacecolor='mediumseagreen', markersize=8, alpha=1.0),
-    Line2D([0], [0], marker='o', color='w', label='im',
+    Line2D([0], [0], marker='o', color='w', label='Early investments and low immaturity',
        markerfacecolor='mediumseagreen', markeredgecolor='black', markersize=8, markeredgewidth=0.6),
-    Line2D([0], [0], marker='o', color='w', label='ti',
+    Line2D([0], [0], marker='o', color='w', label='Other',
            markerfacecolor='gray', markersize=8, alpha=0.6),
 ]
 

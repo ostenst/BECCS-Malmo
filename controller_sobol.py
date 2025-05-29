@@ -25,7 +25,9 @@ model = Model("BECCSMalmo", function=regret_BECCS)
 
 model.uncertainties = [
     RealParameter("O2eff", 0.85, 0.95),     # [-] for CLC
-    RealParameter("Wasu", 800, 900),        # MJ/tO2 (converted from 230*3.6, Macroscopic or Lyngfelt or Ramboll)
+    RealParameter("dTmin", 8, 12),          # [-] Tharun PlantSystem
+    RealParameter("U", 1200, 1800),         # [-] Biermann 2022
+    # RealParameter("Wasu", 800, 900),        # MJ/tO2 (converted from 230*3.6, Macroscopic or Lyngfelt or Ramboll)
 
     RealParameter("operating", 4000, 5000), # Operating hours
     RealParameter("dr", 0.05, 0.10),        # Discount rate
@@ -107,7 +109,7 @@ def analyze(results, ooi):
         sobol_indices["S2_conf"], index=problem["names"], columns=problem["names"]
     )
     return sobol_stats, s2, s2_conf, problem
-sobol_stats, s2, s2_conf, problem = analyze(results, "regret_2")
+sobol_stats, s2, s2_conf, problem = analyze(results, "regret_3")
 print(sobol_stats)
 print(s2)
 print(s2_conf)

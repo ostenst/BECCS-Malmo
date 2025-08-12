@@ -96,6 +96,7 @@ def regret_BECCS(
     # Constants (put SEK and USD here)
     ETS = 80 # assumed price in 2028
 ):
+    print("NO NON-ENERGY OPEX HAS BEEN INCLUDED IN THE MODEL")
     if Time == "Baseline":
         operating_increase = 0
     elif Time == "Downtime":
@@ -207,6 +208,15 @@ def regret_BECCS(
     # Escalating CAPEX of REF and AMINES
     REF.CAPEX = 0
     AMINE.CAPEX = AMINE.shopping_list["amines"]*(1 + overrun)
+    #Annualized CAPEX of AMINE:
+    CRF = (dr*(1+dr)**lifetime)/((1+dr)**lifetime-1)
+    CAPEX_annualized = AMINE.CAPEX * CRF
+    #Normalized CAPEX by mcaptured:
+    CAPEX_normalized = CAPEX_annualized / AMINE.mcaptured
+    print("CAPEX_normalized: ", CAPEX_normalized)
+    CAPEX_fixed = AMINE.CAPEX * 0.06 # 6% of CAPEX per year
+    print("CAPEX_fixed: ", CAPEX_fixed)
+    print("CAPEX_annualized: ", CAPEX_annualized)
 
     # Escalating CAPEX of CLC and OXY
     # initial_items = ['FR', 'cyclone', 'OCash',]

@@ -47,8 +47,8 @@ def regret_BECCS(
     #Uncertainties:
     O2eff = 0.90,        #[-] for CLC
     Wasu = 230*3.6,      #[MJ/tO2], ref. is the macroscopic study
-    dTmin = 10,
-    U = 1500, 
+    dTmin = 445, #C (Crafoord & Lewenhaupt, 2025, temp. difference)
+    U = 43.7, #W/m2K (Casarosa, 2004)
 
     operating = 4500,
     dr=0.075,
@@ -151,8 +151,8 @@ def regret_BECCS(
     mCO2 = 1.0105 * mfuel               #[kgCO2/s]
     mH2O = 0.7416 * mfuel               #[kgH2O/s]
     mfluegas = mCO2 + mH2O + O2oxy*32   #[kg/s], inside the post-oxidation chamber (incl. O2oxy)
-    mash = 0.01375*mfuel
- 
+    mash = 0.01375*mfuel + 1/3600*Qfuel  #[kg/s], equals ash+OC massflows, 1 kgOC/MWh_bränsle - Magnus
+
     P = REF.P
     Pasu = Wasu/1000*O2oxy*32           #[MW] 
     Pnet = P - Pasu - Wcompr - Qcool
@@ -162,7 +162,6 @@ def regret_BECCS(
     Vfluegas = mfuel*(2.342 + 4.203)   #[Nm3/s] assuming no O2 in this flue gas... slightly inconsistent with mfluegas
     Across = Vfluegas/5.5                   # Assumed 5.5m/s from Judit
     Afr = 1300/20 * Across                  # Scaled linearly from Anders
-
     Ahex = Qoxy*10**6/(U*dTmin)
     CLC = ConversionTech("clc", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating+operating_increase)
     CLC.mfluegas = mfluegas
@@ -188,7 +187,7 @@ def regret_BECCS(
     CLC.shopping_list = {
         'FR' : 4.98*(Afr/1531)**cFR*usd * CEPCI/585.7 *1.4, # constants are "installation factors" from Macroscopic
         'cyclone' : 0.345*( 3 )*usd * CEPCI/576.1 *1.4, 
-        'POC' : ( 48.67*10**-6*(CLC.mfluegas) * (1 + np.exp(0.018*(850+273.15)-26.4)) * 1/(0.995-0.98) )*usd * CEPCI/585.7 *1.3,
+        'POC' : ( 48.67*10**-6*(CLC.mfluegas) * (1 + np.exp(0.018*(850+273.15)-26.4)) * 1/(0.995-0.98) )*usd * CEPCI/585.7 *1.3, #NOTE: low cost, but I double checked this now!
         'ASU' : 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*1000*3600/453.592)**cASU *usd * CEPCI/499.6 *1.3,
         'OCash' : (4.6*(mash/6.7)**0.56)*usd * CEPCI/603.1 *1.2,
         'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  #Assuming that Deng had cost year = 2019 NOTE: unclear if installation 1.3 should be included or not? NOTE: Kjästad estimates CL cost in SKEPPKOSTNAD excel?
@@ -197,6 +196,7 @@ def regret_BECCS(
     }
     # for item, cost in CLC.shopping_list.items():
     #     print(f"{item}: {cost:.2f}")
+    # print("Sum of CLC CAPEX: ", sum(CLC.shopping_list.values()))    
 
     OXY.shopping_list = {
         'ASU' : 0.02*(59)**0.067/((1-0.95)**0.073) * (O2demand*1000*3600/453.592)**cASU *usd * CEPCI/499.6 *1.3,
@@ -209,8 +209,10 @@ def regret_BECCS(
     AMINE.CAPEX = AMINE.shopping_list["amines"]*(1 + overrun)
 
     # Escalating CAPEX of CLC and OXY
-    initial_items = ['FR', 'cyclone', 'OCash',]
-    delayed_items = ['CL', 'POC', 'ASU', 'interim']
+    # initial_items = ['FR', 'cyclone', 'OCash',]
+    # delayed_items = ['CL', 'POC', 'ASU', 'interim']
+    initial_items = []
+    delayed_items = ['FR', 'cyclone', 'OCash', 'CL', 'POC', 'ASU', 'interim', 'HEX']
 
     BEC =  sum(value for key, value in CLC.shopping_list.items() if key in initial_items)
     EPCC = BEC*(1 + EPC) # To harmonize with Ramboll amine costs
@@ -298,7 +300,7 @@ def regret_BECCS(
                 if TECH.name == "amine":
                     costs += cmea * sek * 1.5 * TECH.mcaptured / 1000 * 3600 * TECH.operating * 10**-6  # Additional costs for amine capture
                 if TECH.name == "clc":
-                    costs += 1 / 1000 * TECH.Qfuel * TECH.operating * coc * 10**-6  # Additional costs for chemical-looping
+                    costs += 1 / 1000 * TECH.Qfuel * TECH.operating * coc * 10**-6  # Additional costs for chemical-looping (1 kg/MWh_bränsle - Magnus)
 
             else:
                 costs += REF.Qfuel * REF.operating * cbio * 10**-6  # Reference fuel costs

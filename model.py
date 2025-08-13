@@ -47,7 +47,7 @@ def regret_BECCS(
     #Uncertainties:
     O2eff = 0.90,        #[-] for CLC
     Wasu = 230*3.6,      #[MJ/tO2], ref. is the macroscopic study
-    dTmin = 445, #C (Crafoord & Lewenhaupt, 2025, temp. difference)
+    dTlm = 445, #C (Crafoord & Lewenhaupt, 2025, temp. difference)
     U = 43.7, #W/m2K (Casarosa, 2004)
 
     operating = 4500,
@@ -59,8 +59,8 @@ def regret_BECCS(
     CEPCI=800, 
     sek=0.089,
     usd=0.96,
-    ctrans=600,
-    cstore=300,
+    ctrans=60,
+    cstore=14,
     crc=200,
     cmea=29,    #SEK/kgmea (Ramboll)
     coc=500,    #EUR/tOC Magnus/Felicia
@@ -68,7 +68,7 @@ def regret_BECCS(
     cAM=2154,   #MSEK , Ramboll Increased capex compared to baseline?
     cFR=0.6,    #[-] Macroscopic exponent
     cASU=0.852, #[-] Macroscopic exponent
-    opfix=0.05, #[-] Karlsson, 2023
+    opfix=40, #[MEUR/yr] Ramboll 2023
 
     EPC=0.175,
     contingencies=0.25,
@@ -163,7 +163,7 @@ def regret_BECCS(
     Vfluegas = mfuel*(2.342 + 4.203)   #[Nm3/s] assuming no O2 in this flue gas... slightly inconsistent with mfluegas
     Across = Vfluegas/5.5                   # Assumed 5.5m/s from Judit
     Afr = 1300/20 * Across                  # Scaled linearly from Anders
-    Ahex = Qoxy*10**6/(U*dTmin)
+    Ahex = Qoxy*10**6/(U*dTlm)
     CLC = ConversionTech("clc", Qfuel, REF.Qnet , Pnet, memitted, mcaptured, operating+operating_increase)
     CLC.mfluegas = mfluegas
 
@@ -288,11 +288,10 @@ def regret_BECCS(
             if t > timing + 1 and invested:
 
                 # Calculate operational costs and revenues
-                costs += TECH.CAPEX * opfix
                 costs += TECH.Qfuel * TECH.operating * cbio * 10**-6  # Biomass fuel costs
                 revenues += (TECH.Qnet * (cheat * celc) + TECH.P * celc) * TECH.operating * 10**-6  # Revenue from CHP
 
-                costs += TECH.mcaptured / 1000 * 3600 * TECH.operating * (ctrans*sek + cstore*sek) * 10**-6  # Capture and storage costs
+                costs += TECH.mcaptured / 1000 * 3600 * TECH.operating * (ctrans + cstore) * 10**-6  # Capture and storage costs
 
                 if Auction and t < timing+15+2: #Add two years for the capital delay before operations
                     revenues += TECH.mcaptured / 1000 * 3600 * TECH.operating * (crc+160) * 10**-6  # Revenue from CO2 capture credits
@@ -303,7 +302,9 @@ def regret_BECCS(
                     costs += cmea * sek * 1.5 * TECH.mcaptured / 1000 * 3600 * TECH.operating * 10**-6  # Additional costs for amine capture
                 if TECH.name == "clc":
                     costs += 1 / 1000 * TECH.Qfuel * TECH.operating * coc * 10**-6  # Additional costs for chemical-looping (1 kg/MWh_bränsle - Magnus)
-
+                if TECH.name != "ref":
+                    costs += opfix #add fixed opex in MEUR/yr
+    
             else:
                 costs += REF.Qfuel * REF.operating * cbio * 10**-6  # Reference fuel costs
                 revenues += (REF.Qnet * (cheat * celc) + REF.P * celc) * REF.operating * 10**-6  # Reference revenue
@@ -343,9 +344,29 @@ def regret_BECCS(
 
 if __name__ == "__main__":
 
+    # Read transport costs and interpolate for 850 km from Malmö to Northern Lights
+    df = pd.read_csv('transport_costs.csv')
+    value_cols = [col for col in df.columns if col != 'distance']
+    target_dist = 850
+    
+    # Interpolate values
+    interpolated = {}
+    for col in value_cols:
+        sorted_df = df.sort_values('distance')
+        interpolated[col] = np.interp(target_dist, sorted_df['distance'], sorted_df[col])
+    
+    print(f"\nInterpolated values for {target_dist} km:")
+    for col, val in interpolated.items():
+        print(f"  {col}: {val:.4f}")
+    
+    print(f"\nMin: {min(interpolated.values()):.4f} SEK/tCO2 for transport and storage")
+    print(f"Max: {max(interpolated.values()):.4f} SEK/tCO2 for transport and storage")
+         
     dict = regret_BECCS()
 
     print("On this branch, we have three types of regret outputs. So the regret function and outputs need to be adapted.")
     print("amine vs. ref regret=", dict["regret_1"])
     print("amine vs. oxy regret=", dict["regret_2"])
     print("amine vs. clc regret=", dict["regret_3"])
+    
+

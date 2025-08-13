@@ -25,21 +25,21 @@ model = Model("BECCSMalmo", function=regret_BECCS)
 
 model.uncertainties = [
     RealParameter("O2eff", 0.80, 0.95),     # [-] for CLC Check referenes with Magnus
-    RealParameter("Wasu", 800, 900),        # MJ/tO2 (converted from 230*3.6, Macroscopic or Lyngfelt or Ramboll)
-    RealParameter("dTmin", 356, 534),          # [C] Crafoord & Lewenhaupt, 2025
-    RealParameter("U", 35, 52),                 # W/m2K Casarosa, 2004
+    # RealParameter("Wasu", 800, 900),        # MJ/tO2 (converted from 230*3.6, Macroscopic or Lyngfelt or Ramboll)
+    RealParameter("dTlm", 350, 530),          # [C] Crafoord & Lewenhaupt, 2025
+    RealParameter("U", 50, 50),                 # W/m2K Casarosa, 2004
 
     RealParameter("operating", 4000, 5000), # Operating hours
     RealParameter("dr", 0.05, 0.10),        # Discount rate
     IntegerParameter("lifetime", 20, 30),      # Economic lifetime
-    RealParameter("celc", 10, 120),         # Beiron tycker 100?
+    RealParameter("celc", 10, 100),         # Beiron tycker 100?
     RealParameter("cheat", 0.50, 0.95),
     RealParameter("cbio", 20, 100),         # BEIRON, insikter
     RealParameter("CEPCI", 700, 900),
     # RealParameter("sek", 0.08, 0.10),
     # RealParameter("usd", 0.90, 1.00),
-    RealParameter("ctrans", 554, 755),        # SEK/tCO2, Kjärstad @Gävle 555nm, INCLUDES C&L???
-    RealParameter("cstore", 201, 496),        # SEK/tCO2, Kjärstad @NL, calculate by total_system - only_transport
+    RealParameter("ctrans", 52, 70),        # EUR/tCO2, Kjärstad  450nm, INCLUDES C&L???
+    RealParameter("cstore", 12, 16),        # SEK/tCO2, Kjärstad @NL, calculate by total_system - only_transport
     RealParameter("crc", 25, 300),          # Reference cost
     RealParameter("cmea", 25, 35),         # SEK/kg, Ramboll
     RealParameter("coc", 200, 600),         # EUR/t, Magnus/Felicia
@@ -47,9 +47,9 @@ model.uncertainties = [
     RealParameter("cAM", 1723, 2585),       # +-20% of Ramboll CAPEX
     RealParameter("cFR", 0.48, 0.72),       # +-20% of Macroscopic CAPEX exponent   
     RealParameter("cASU", 0.68, 1.02),      # +-20% of Macroscopic CAPEX exponent   
-    RealParameter("opfix", 0.04, 0.06),      # Karlsson, 2023
+    RealParameter("opfix", 36, 54),      # Ramboll 2023 MEUR/yr
 
-    RealParameter("EPC", 0.14, 0.21),       # +-20% of Macroscopic EPC
+    RealParameter("EPC", 0.05, 0.15),       # +-20% of Macroscopic EPC NO use Ramboll 2023
     RealParameter("contingencies", 0.15, 0.35), # Ramboll uses 25%
     RealParameter("ownercost", 0.03, 0.07),             # Ramboll uses 5%
     RealParameter("overrun", 0.00, 0.45),           #Beiron FOAK=NOAK costs

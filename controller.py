@@ -47,6 +47,7 @@ model.uncertainties = [
     RealParameter("cAM", 1723, 2585),       # +-20% of Ramboll CAPEX
     RealParameter("cFR", 0.48, 0.72),       # +-20% of Macroscopic CAPEX exponent   
     RealParameter("cASU", 0.68, 1.02),      # +-20% of Macroscopic CAPEX exponent   
+    RealParameter("opfix", 0.04, 0.06),      # Karlsson, 2023
 
     RealParameter("EPC", 0.14, 0.21),       # +-20% of Macroscopic EPC
     RealParameter("contingencies", 0.15, 0.35), # Ramboll uses 25%

@@ -47,6 +47,7 @@ model.uncertainties = [
     RealParameter("cAM", 1723, 2585),       # +-20% of Ramboll CAPEX
     RealParameter("cFR", 0.48, 0.72),       # +-20% of Macroscopic CAPEX exponent   
     RealParameter("cASU", 0.68, 1.02),      # +-20% of Macroscopic CAPEX exponent   
+    RealParameter("opfix", 0.04, 0.06),      # Karlsson, 2023
 
     RealParameter("EPC", 0.14, 0.21),       # +-20% of Macroscopic EPC
     RealParameter("contingencies", 0.15, 0.35), # Ramboll uses 25%
@@ -90,7 +91,7 @@ n_scenarios = 3000
 n_policies = 0
 
 # If Sobol sampling:
-print(" NOTE : You must specify 1 lever to analyze sensitivity on")
+print("NOTE: You must specify 1 outcome (out of the many) to base the SA on")
 results = perform_experiments(model, n_scenarios, n_policies, uncertainty_sampling = Samplers.SOBOL, lever_sampling = Samplers.SOBOL)
 experiments, outcomes = results
 
@@ -109,6 +110,8 @@ def analyze(results, ooi):
         sobol_indices["S2_conf"], index=problem["names"], columns=problem["names"]
     )
     return sobol_stats, s2, s2_conf, problem
+
+print("NOTE: Adapt the analyze() function to the outcome you want to analyze")
 sobol_stats, s2, s2_conf, problem = analyze(results, "regret_3")
 print(sobol_stats)
 print(s2)

@@ -68,6 +68,7 @@ def regret_BECCS(
     cAM=2154,   #MSEK , Ramboll Increased capex compared to baseline?
     cFR=0.6,    #[-] Macroscopic exponent
     cASU=0.852, #[-] Macroscopic exponent
+    opfix=0.05, #[-] Karlsson, 2023
 
     EPC=0.175,
     contingencies=0.25,
@@ -96,7 +97,6 @@ def regret_BECCS(
     # Constants (put SEK and USD here)
     ETS = 80 # assumed price in 2028
 ):
-    print("NO NON-ENERGY OPEX HAS BEEN INCLUDED IN THE MODEL")
     if Time == "Baseline":
         operating_increase = 0
     elif Time == "Downtime":
@@ -208,15 +208,6 @@ def regret_BECCS(
     # Escalating CAPEX of REF and AMINES
     REF.CAPEX = 0
     AMINE.CAPEX = AMINE.shopping_list["amines"]*(1 + overrun)
-    #Annualized CAPEX of AMINE:
-    CRF = (dr*(1+dr)**lifetime)/((1+dr)**lifetime-1)
-    CAPEX_annualized = AMINE.CAPEX * CRF
-    #Normalized CAPEX by mcaptured:
-    CAPEX_normalized = CAPEX_annualized / AMINE.mcaptured
-    print("CAPEX_normalized: ", CAPEX_normalized)
-    CAPEX_fixed = AMINE.CAPEX * 0.06 # 6% of CAPEX per year
-    print("CAPEX_fixed: ", CAPEX_fixed)
-    print("CAPEX_annualized: ", CAPEX_annualized)
 
     # Escalating CAPEX of CLC and OXY
     # initial_items = ['FR', 'cyclone', 'OCash',]
@@ -264,7 +255,6 @@ def regret_BECCS(
 
         invested = False
         NPV = 0
-        
         for t in range(1, analysis_period):
     
             if Bioshortage and t < 11:
@@ -293,15 +283,17 @@ def regret_BECCS(
             if t == timing or t == timing + 1:
                 invested = True  # Implies the energy balance (Qdh, Pel, Qfuel) has changed, incl. (C&L and ASU) and that T&S is operated
                 costs += TECH.CAPEX / 2  # [MEUR]
-
+            
             # Adding OPEX and revenues
             if t > timing + 1 and invested:
 
                 # Calculate operational costs and revenues
+                costs += TECH.CAPEX * opfix
                 costs += TECH.Qfuel * TECH.operating * cbio * 10**-6  # Biomass fuel costs
                 revenues += (TECH.Qnet * (cheat * celc) + TECH.P * celc) * TECH.operating * 10**-6  # Revenue from CHP
 
                 costs += TECH.mcaptured / 1000 * 3600 * TECH.operating * (ctrans*sek + cstore*sek) * 10**-6  # Capture and storage costs
+
                 if Auction and t < timing+15+2: #Add two years for the capital delay before operations
                     revenues += TECH.mcaptured / 1000 * 3600 * TECH.operating * (crc+160) * 10**-6  # Revenue from CO2 capture credits
                 else:

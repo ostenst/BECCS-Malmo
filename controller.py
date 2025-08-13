@@ -27,7 +27,7 @@ model.uncertainties = [
     RealParameter("O2eff", 0.80, 0.95),     # [-] for CLC Check referenes with Magnus
     # RealParameter("Wasu", 800, 900),        # MJ/tO2 (converted from 230*3.6, Macroscopic or Lyngfelt or Ramboll)
     RealParameter("dTlm", 350, 530),          # [C] Crafoord & Lewenhaupt, 2025
-    RealParameter("U", 50, 50),                 # W/m2K Casarosa, 2004
+    RealParameter("U", 40, 50),                 # W/m2K Casarosa, 2004
 
     RealParameter("operating", 4000, 5000), # Operating hours
     RealParameter("dr", 0.05, 0.10),        # Discount rate

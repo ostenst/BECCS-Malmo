@@ -69,7 +69,7 @@ def regret_BECCS(
     cFR=0.6,    #[-] Macroscopic exponent
     cASU=0.852, #[-] Macroscopic exponent
     ccond=23.9, #MEUR/kgCO2/s Deng 2019
-    opfix=40, #[MEUR/yr] Ramboll 2023
+    opfix=4.0, #[MEUR/yr] Ramboll 2023
 
     EPC=0.175,
     contingencies=0.25,
@@ -233,23 +233,16 @@ def regret_BECCS(
     TPC = EPCC*(1 + contingencies) # Applying Ramboll's logic
     OXY.CAPEX = TPC*(1 + ownercost)*(1 + overrun)
 
-    # CAPEX = []
-    # for items, contingency_i in [[initial_items, contingency_clc],[delayed_items, contingency_process]]:
-    #     BEC =  sum(value for key, value in CLC.shopping_list.items() if key in items)
-    #     EPCC = BEC*(1 + EPC)
-    #     TPC = EPCC + contingency_i*BEC + contingency_project*(EPCC + contingency_i*BEC)
-    #     TOC = TPC*(1 + ownercost)
-    #     TCR = 1.154*TOC #Check Macroscopic ref
-    #     CAPEX.append(TCR)
-    # CLC.CAPEX_initial = CAPEX[0]
-    # CLC.CAPEX = CAPEX[1]
-
-    # BEC =  sum(OXY.shopping_list.values())
-    # EPCC = BEC*(1 + EPC)
-    # TPC = EPCC + contingency_process*BEC + contingency_project*(EPCC + contingency_process*BEC)
-    # TOC = TPC*(1 + ownercost)
-    # TCR = 1.154*TOC #Check Macroscopic ref
-    # OXY.CAPEX = TCR
+    # # Calculate CO2 capture costs for a reality check:
+    # CRF = (1+dr)**lifetime * dr / ((1+dr)**lifetime - 1)
+    # # CAC = CAPEX/tCO2 + OPEXE + OPEXvar + OPEXfix + TS
+    # for TECH in [AMINE, OXY, CLC]:
+    #     CAC = (TECH.CAPEX*CRF + opfix)*10**6 / (TECH.mcaptured / 1000 * 3600 * TECH.operating) + (ctrans + cstore) #Simplified, without OPEXe and OPEXvar
+    #     print(f"{TECH.name}: {CAC:.2f} EUR/tCO2")
+    #     print(TECH.CAPEX*CRF *10**6/ (TECH.mcaptured / 1000 * 3600 * TECH.operating) )
+    #     print(opfix *10**6 / (TECH.mcaptured / 1000 * 3600 * TECH.operating) )
+    #     print(ctrans)
+    #     print(cstore)
     
     def calculate_NPV(TECH, cbio, celc, ETS, crc):
         analysis_period = timing + lifetime  # Example: invest after 5, lifetime of 25 => 30 years

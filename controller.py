@@ -48,7 +48,7 @@ model.uncertainties = [
     RealParameter("cFR", 0.48, 0.72),       # +-20% of Macroscopic CAPEX exponent   
     RealParameter("cASU", 0.68, 1.02),      # +-20% of Macroscopic CAPEX exponent  
     RealParameter("ccond", 20, 30),      # MEUR/kgCO2/s Deng 2019
-    RealParameter("opfix", 36, 54),      # Ramboll 2023 MEUR/yr
+    RealParameter("opfix", 3.6, 5.4),      # Ramboll 2023 MEUR/yr
 
     RealParameter("EPC", 0.05, 0.15),       # +-20% of Macroscopic EPC NO use Ramboll 2023
     RealParameter("contingencies", 0.15, 0.35), # Ramboll uses 25%
@@ -108,6 +108,8 @@ experiments.to_csv("experiments.csv", index=False)
 outcomes_df.to_csv("outcomes.csv", index=False)
 
 outcomes_df["Auction"] = experiments["Auction"]
+outcomes_df["crc"] = experiments["crc"]
+outcomes_df["Integration"] = experiments["Integration"]
 outcomes_df["Time"] = experiments["Time"]
 outcomes_df["cASU"] = experiments["cASU"]
 outcomes_df["timing"] = experiments["timing"]

@@ -31,7 +31,7 @@ def main():
     npv_amine_values = outcomes['npv_amine'].values
     
     # Use only 10% of the data for faster plotting
-    sample_size = int(len(cbio_values) * 0.1)
+    sample_size = int(len(cbio_values) * 0.80)
     indices = np.random.choice(len(cbio_values), sample_size, replace=False)
     
     cbio_values = cbio_values[indices]

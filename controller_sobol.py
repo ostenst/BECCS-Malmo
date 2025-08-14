@@ -48,7 +48,7 @@ model.uncertainties = [
     RealParameter("cFR", 0.48, 0.72),       # +-20% of Macroscopic CAPEX exponent   
     RealParameter("cASU", 0.68, 1.02),      # +-20% of Macroscopic CAPEX exponent   
     RealParameter("ccond", 20, 30),      # MEUR/kgCO2/s Deng 2019
-    RealParameter("opfix", 36, 54),      # Ramboll 2023 MEUR/yr
+    RealParameter("opfix", 3.6, 5.4),      # Ramboll 2023 MEUR/yr
 
     RealParameter("EPC", 0.05, 0.15),       # +-20% of Macroscopic EPC NO use Ramboll 2023
     RealParameter("contingencies", 0.15, 0.35), # Ramboll uses 25%
@@ -118,7 +118,7 @@ def analyze(results, ooi):
     return sobol_stats, s2, s2_conf, problem
 
 print("NOTE: Adapt the analyze() function to the outcome you want to analyze")
-sobol_stats, s2, s2_conf, problem = analyze(results, "regret_3")
+sobol_stats, s2, s2_conf, problem = analyze(results, "regret_1")
 print(sobol_stats)
 print(s2)
 print(s2_conf)

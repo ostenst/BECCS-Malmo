@@ -146,9 +146,9 @@ if __name__ == "__main__":
 
     # What is the density after filtering?
     feature_limits = {
-        # "Auction": 0,           # Auction must be False (converted to 0 earlier)
-        # "Integration": 1, 
-        # "crc": (None, 120)      # CRC must be less than 100
+        "Auction": 0,           # Auction must be False (converted to 0 earlier)
+        "Integration": 1, 
+        "crc": (None, 100)      # CRC must be less than 100
     }
     for key, val in feature_limits.items():
         if isinstance(val, tuple):

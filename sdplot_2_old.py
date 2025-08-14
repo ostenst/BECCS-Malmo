@@ -10,7 +10,7 @@ outcomes = pd.read_csv("outcomes.csv")
 data = pd.concat([experiments, outcomes], axis=1)
 
 # Filter Integration == True and Auction == False
-data = data[(data["Integration"] == True) & (data["Auction"] == False) & (data["crc"] < 210)].reset_index(drop=True)
+data = data[(data["Integration"] == True) & (data["Auction"] == False) & (data["crc"] < 100)].reset_index(drop=True)
 # data = data[(data["Integration"] == True) & (data["Auction"] == False)].reset_index(drop=True)
 
 # Bin the filtered data where "Procurement" == False
@@ -46,27 +46,7 @@ data_lhs["color"] = data_lhs.apply(assign_color, axis=1)
 # Plotting
 fig, ax = plt.subplots(figsize=(8, 6))
 
-# # Plot Auction == False (deepskyblue)
-# subset_deepskyblue = data_lhs[data_lhs["color"] == "deepskyblue"]
-# ax.scatter(
-#     subset_deepskyblue["EUA"],
-#     subset_deepskyblue["regret_1"],
-#     color="deepskyblue",
-#     s=40,
-#     alpha=0.08,
-#     label="Procurement = False"
-# )
 
-# # Plot Auction == True (gray)
-# subset_gray = data_lhs[data_lhs["color"] == "gray"]
-# ax.scatter(
-#     subset_gray["EUA"],
-#     subset_gray["regret_1"],
-#     color="gray",
-#     s=40,
-#     alpha=0.08,
-#     label="Procurement = True"
-# )
 ax.scatter(
     data_lhs["EUA"],
     data_lhs["regret_1"],
@@ -76,7 +56,7 @@ ax.scatter(
 )
 
 # Overlay: highlight with distinct edge
-overlay = data_lhs[(data_lhs["EUA"] < 4.6) & (data_lhs["Procurement"] == False)]
+overlay = data_lhs[(data_lhs["EUA"] < 4.7) & (data_lhs["Procurement"] == False)]
 ax.scatter(
     overlay["EUA"],
     overlay["regret_1"],
@@ -85,15 +65,15 @@ ax.scatter(
     linewidths=0.6,
     s=40,
     alpha=0.30,
-    label="EUA < 4.6 & Procurement = False"
+    label="EUA < 4.7 & Procurement = False"
 )
 
 legend_elements = [
-    Line2D([0], [0], marker='o', color='w', label='ti',
+    Line2D([0], [0], marker='o', color='w', label='Procurement = False',
            markerfacecolor='deepskyblue', markersize=8, alpha=1.0),
-    Line2D([0], [0], marker='o', color='w', label='im',
+    Line2D([0], [0], marker='o', color='w', label='Procurement = False & EUA < 4.7',
        markerfacecolor='deepskyblue', markeredgecolor='black', markersize=8, markeredgewidth=0.6),
-    Line2D([0], [0], marker='o', color='w', label='ti',
+    Line2D([0], [0], marker='o', color='w', label='Other scenarios',
            markerfacecolor='gray', markersize=8, alpha=0.6),
 ]
 

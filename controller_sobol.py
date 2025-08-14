@@ -39,14 +39,15 @@ model.uncertainties = [
     # RealParameter("sek", 0.08, 0.10),
     # RealParameter("usd", 0.90, 1.00),
     RealParameter("ctrans", 52, 70),        # EUR/tCO2, Kjärstad  450nm, INCLUDES C&L???
-    RealParameter("cstore", 12, 16),        # SEK/tCO2, Kjärstad @NL, calculate by total_system - only_transport
+    RealParameter("cstore", 12, 16),        # EUR/tCO2, Kjärstad @NL, calculate by total_system - only_transport
     RealParameter("crc", 25, 300),          # Reference cost
-    RealParameter("cmea", 25, 35),         # SEK/kg, Ramboll
+    RealParameter("cmea", 2.2, 3.1),         # EUR/kg, Ramboll
     RealParameter("coc", 200, 600),         # EUR/t, Magnus/Felicia
 
-    RealParameter("cAM", 1723, 2585),       # +-20% of Ramboll CAPEX
+    RealParameter("cAM", 153, 230),       # +-20% of Ramboll CAPEX MEUR
     RealParameter("cFR", 0.48, 0.72),       # +-20% of Macroscopic CAPEX exponent   
     RealParameter("cASU", 0.68, 1.02),      # +-20% of Macroscopic CAPEX exponent   
+    RealParameter("ccond", 20, 30),      # MEUR/kgCO2/s Deng 2019
     RealParameter("opfix", 36, 54),      # Ramboll 2023 MEUR/yr
 
     RealParameter("EPC", 0.05, 0.15),       # +-20% of Macroscopic EPC NO use Ramboll 2023
@@ -84,6 +85,11 @@ model.outcomes = [
     ScalarOutcome("npv_amine", ScalarOutcome.MAXIMIZE),
     ScalarOutcome("npv_oxy", ScalarOutcome.MAXIMIZE),
     ScalarOutcome("npv_clc", ScalarOutcome.MAXIMIZE),
+
+    ScalarOutcome("capex_ref", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("capex_amine", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("capex_clc", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("capex_oxy", ScalarOutcome.MINIMIZE),
 ]
 
 ema_logging.log_to_stderr(ema_logging.INFO)
@@ -196,7 +202,7 @@ ax.set_xlim(-padding, padding)
 ax.set_ylim(-padding, padding)
 
 # Title
-ax.set_title("Top 10 Parameters - Radial Sensitivity Map\nRed = ST, Blue = S1, Gray Lines = S2", fontsize=10, pad=20)
+ax.set_title("Top 10 Parameters - Radial Sensitivity Map\nRed = ST, Pink = S1, Gray Lines = S2", fontsize=10, pad=20)
 
 # plt.tight_layout()
 plt.savefig('sobol.png', dpi=450, bbox_inches='tight')

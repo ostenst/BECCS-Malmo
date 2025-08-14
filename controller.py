@@ -39,14 +39,15 @@ model.uncertainties = [
     # RealParameter("sek", 0.08, 0.10),
     # RealParameter("usd", 0.90, 1.00),
     RealParameter("ctrans", 52, 70),        # EUR/tCO2, Kjärstad  450nm, INCLUDES C&L???
-    RealParameter("cstore", 12, 16),        # SEK/tCO2, Kjärstad @NL, calculate by total_system - only_transport
+    RealParameter("cstore", 12, 16),        # EUR/tCO2, Kjärstad @NL, calculate by total_system - only_transport
     RealParameter("crc", 25, 300),          # Reference cost
-    RealParameter("cmea", 25, 35),         # SEK/kg, Ramboll
+    RealParameter("cmea", 2.2, 3.1),         # EUR/kg, Ramboll
     RealParameter("coc", 200, 600),         # EUR/t, Magnus/Felicia
 
-    RealParameter("cAM", 1723, 2585),       # +-20% of Ramboll CAPEX
+    RealParameter("cAM", 153, 230),       # +-20% of Ramboll CAPEX MEUR
     RealParameter("cFR", 0.48, 0.72),       # +-20% of Macroscopic CAPEX exponent   
-    RealParameter("cASU", 0.68, 1.02),      # +-20% of Macroscopic CAPEX exponent   
+    RealParameter("cASU", 0.68, 1.02),      # +-20% of Macroscopic CAPEX exponent  
+    RealParameter("ccond", 20, 30),      # MEUR/kgCO2/s Deng 2019
     RealParameter("opfix", 36, 54),      # Ramboll 2023 MEUR/yr
 
     RealParameter("EPC", 0.05, 0.15),       # +-20% of Macroscopic EPC NO use Ramboll 2023
@@ -83,6 +84,11 @@ model.outcomes = [
     ScalarOutcome("npv_amine", ScalarOutcome.MAXIMIZE),
     ScalarOutcome("npv_oxy", ScalarOutcome.MAXIMIZE),
     ScalarOutcome("npv_clc", ScalarOutcome.MAXIMIZE),
+
+    ScalarOutcome("capex_ref", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("capex_amine", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("capex_clc", ScalarOutcome.MINIMIZE),
+    ScalarOutcome("capex_oxy", ScalarOutcome.MINIMIZE),
 ]
 
 # model.constants = [
@@ -111,11 +117,20 @@ print(outcomes_df)
 
 ## ------------------ PLOTTING REGRET_1 ------------------ ##
 # Define the subsets
+# subsets = { # Previous subsets
+#     "All Data": outcomes_df,
+#     "Time = Downtime": outcomes_df[outcomes_df["Time"] == "Downtime"],
+#     "Auction = False and Time = Downtime": outcomes_df[
+#         (outcomes_df["Auction"] == False) & (outcomes_df["Time"] == "Downtime")
+#     ]
+# }
 subsets = {
     "All Data": outcomes_df,
-    "Time = Downtime": outcomes_df[outcomes_df["Time"] == "Downtime"],
-    "Auction = False and Time = Downtime": outcomes_df[
+    "High-regret": outcomes_df[
         (outcomes_df["Auction"] == False) & (outcomes_df["Time"] == "Downtime")
+    ],
+    "Low-regret": outcomes_df[
+        (outcomes_df["Auction"] == True) & (outcomes_df["Time"] == "Uptime")
     ]
 }
 
@@ -133,9 +148,10 @@ box_colors = []
 labels = ["3", "2", "1"]  # Reversed labels to match reversed plotting order
 
 # Reverse the subset order
-for subset in reversed(list(subsets.values())):
+for subset_name, subset in reversed(list(subsets.items())):
     plot_data.append(subset[regret_col])
     regret_freq = (subset[regret_col] > 0).mean()
+    print(f"Regret 1 densities: {subset_name}: {regret_freq}")
     box_colors.append(cmap(regret_freq))
 
 # Plot
@@ -182,10 +198,13 @@ plt.savefig("regret_1.png", dpi=600)
 # Define the subsets
 subsets = {
     "All Data": outcomes_df,
-    "cASU_low": outcomes_df[outcomes_df["cASU"] < 0.85],
-    "timing_early and cASU": outcomes_df[
+    "High-regret": outcomes_df[
         ((outcomes_df["timing"] == 5) | (outcomes_df["timing"] == 10)) &
-        (outcomes_df["cASU"] < 0.85)
+        (outcomes_df["cASU"] < 0.90)
+    ],
+    "Low-regret": outcomes_df[
+        ((outcomes_df["timing"] == 15) | (outcomes_df["timing"] == 20)) &
+        (outcomes_df["cASU"] > 0.90)
     ]
 }
 
@@ -203,10 +222,12 @@ box_colors = []
 labels = ["3", "2", "1"]  # Reversed labels to match reversed plotting order
 
 # Reverse the subset order
-for subset in reversed(list(subsets.values())):
+for subset_name, subset in reversed(list(subsets.items())):
     plot_data.append(subset[regret_col])
     regret_freq = (subset[regret_col] > 0).mean()
+    print(f"Regret 2 densities: {subset_name}: {regret_freq}")
     box_colors.append(cmap(regret_freq))
+
 
 # Plot
 fig, ax = plt.subplots(figsize=(10, 4.5))  # Horizontal layout
@@ -252,13 +273,13 @@ plt.savefig("regret_2.png", dpi=600)
 # Define the subsets
 subsets = {
     "All Data": outcomes_df,
-    "immature_low": outcomes_df[outcomes_df["immature"] < 1.50],
-    # "timing_early": outcomes_df[
-    #     (outcomes_df["timing"] == 5) | (outcomes_df["timing"] == 10)
-    # ],
-    "timing_early and immature": outcomes_df[
+    "High-regret": outcomes_df[
         ((outcomes_df["timing"] == 5) | (outcomes_df["timing"] == 10)) &
         (outcomes_df["immature"] < 1.50)
+    ],
+    "Low-regret": outcomes_df[
+        ((outcomes_df["timing"] == 15) | (outcomes_df["timing"] == 20)) &
+        (outcomes_df["immature"] > 1.50)
     ]
 }
 
@@ -276,9 +297,10 @@ box_colors = []
 labels = ["3", "2", "1"]  # Reversed labels to match reversed plotting order
 
 # Reverse the subset order
-for subset in reversed(list(subsets.values())):
+for subset_name, subset in reversed(list(subsets.items())):
     plot_data.append(subset[regret_col])
     regret_freq = (subset[regret_col] > 0).mean()
+    print(f"Regret 3 densities: {subset_name}: {regret_freq}")
     box_colors.append(cmap(regret_freq))
 
 # Plot

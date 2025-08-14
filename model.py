@@ -62,12 +62,13 @@ def regret_BECCS(
     ctrans=60,
     cstore=14,
     crc=200,
-    cmea=29,    #SEK/kgmea (Ramboll)
+    cmea=29*0.089,    #SEK/kgmea => EUR/kgmea (Ramboll)
     coc=500,    #EUR/tOC Magnus/Felicia
 
-    cAM=2154,   #MSEK , Ramboll Increased capex compared to baseline?
+    cAM=2154*0.089,   #MSEK => MEUR , Ramboll Increased capex compared to baseline?
     cFR=0.6,    #[-] Macroscopic exponent
     cASU=0.852, #[-] Macroscopic exponent
+    ccond=23.9, #MEUR/kgCO2/s Deng 2019
     opfix=40, #[MEUR/yr] Ramboll 2023
 
     EPC=0.175,
@@ -183,7 +184,7 @@ def regret_BECCS(
     REF.shopping_list = {
     }
     AMINE.shopping_list = {
-        'amines' : cAM*sek * AMINE.mcaptured/16.6, # assuming a linear relationship between mcaptured and CAPEX... Let's remove the CL capex cost:
+        'amines' : cAM * AMINE.mcaptured/16.6, # assuming a linear relationship between mcaptured and CAPEX... Let's remove the CL capex cost:
     }
     CLC.shopping_list = {
         'FR' : 4.98*(Afr/1531)**cFR*usd * CEPCI/585.7 *1.4, # constants are "installation factors" from Macroscopic
@@ -191,7 +192,7 @@ def regret_BECCS(
         'POC' : ( 48.67*10**-6*(CLC.mfluegas) * (1 + np.exp(0.018*(850+273.15)-26.4)) * 1/(0.995-0.98) )*usd * CEPCI/585.7 *1.3, #NOTE: low cost, but I double checked this now!
         'ASU' : 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*1000*3600/453.592)**cASU *usd * CEPCI/499.6 *1.3,
         'OCash' : (4.6*(mash/6.7)**0.56)*usd * CEPCI/603.1 *1.2,
-        'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  #Assuming that Deng had cost year = 2019 NOTE: unclear if installation 1.3 should be included or not? NOTE: Kjästad estimates CL cost in SKEPPKOSTNAD excel?
+        'CL' : ccond * mcaptured/37.31 * CEPCI/607.5 *1.3,  #Assuming that Deng had cost year = 2019 NOTE: unclear if installation 1.3 should be included or not? NOTE: Kjästad estimates CL cost in SKEPPKOSTNAD excel?
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2, #Function from Judit, 4000m3 from Ramboll, CEPCI from Google
         'HEX' :  (2.8626 * Ahex ** 0.7988)/1000 * CEPCI/576.1 *1.3 # Biermann 2022 Appendix is source! He uses kEUR so divide by 1000 to get MEUR
     }
@@ -201,7 +202,7 @@ def regret_BECCS(
 
     OXY.shopping_list = {
         'ASU' : 0.02*(59)**0.067/((1-0.95)**0.073) * (O2demand*1000*3600/453.592)**cASU *usd * CEPCI/499.6 *1.3,
-        'CL' : 25.5 * mcaptured/37.31 * CEPCI/607.5 *1.3,  
+        'CL' : ccond * mcaptured/37.31 * CEPCI/607.5 *1.3,  
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2,  
     }
 
@@ -299,7 +300,7 @@ def regret_BECCS(
                     revenues += TECH.mcaptured / 1000 * 3600 * TECH.operating * crc * 10**-6  # Revenue from CO2 capture credits
 
                 if TECH.name == "amine":
-                    costs += cmea * sek * 1.5 * TECH.mcaptured / 1000 * 3600 * TECH.operating * 10**-6  # Additional costs for amine capture
+                    costs += cmea * 1.5 * TECH.mcaptured / 1000 * 3600 * TECH.operating * 10**-6  # Additional costs for amine capture
                 if TECH.name == "clc":
                     costs += 1 / 1000 * TECH.Qfuel * TECH.operating * coc * 10**-6  # Additional costs for chemical-looping (1 kg/MWh_bränsle - Magnus)
                 if TECH.name != "ref":
@@ -337,6 +338,11 @@ def regret_BECCS(
         "npv_amine": npv_values["amine"],     
         "npv_oxy": npv_values["oxy"],     
         "npv_clc": npv_values["clc"],     
+
+        "capex_ref" : REF.CAPEX,
+        "capex_amine" : AMINE.CAPEX,
+        "capex_clc" : CLC.CAPEX,
+        "capex_oxy" : OXY.CAPEX,
     }
 
     return results

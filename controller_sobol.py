@@ -118,7 +118,7 @@ def analyze(results, ooi):
     return sobol_stats, s2, s2_conf, problem
 
 print("NOTE: Adapt the analyze() function to the outcome you want to analyze")
-sobol_stats, s2, s2_conf, problem = analyze(results, "regret_1")
+sobol_stats, s2, s2_conf, problem = analyze(results, "regret_3")
 print(sobol_stats)
 print(s2)
 print(s2_conf)
@@ -175,7 +175,7 @@ max_s2 = np.nanmax(S2_matrix_top)
 for i in range(n):
     for j in range(i + 1, n):
         s2_val = S2_matrix_top[i, j]
-        if not np.isnan(s2_val) and s2_val > 0.01:
+        if not np.isnan(s2_val) and s2_val > 0.006:
             x_vals = [x[i], x[j]]
             y_vals = [y[i], y[j]]
             lw = 0.5 + 5 * (s2_val / max_s2)

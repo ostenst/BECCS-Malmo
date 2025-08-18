@@ -153,6 +153,47 @@ ax2.grid(True, alpha=0.3)
 # Adjust layout and save
 plt.tight_layout()
 plt.savefig("sd_3_oxy.png", dpi=600)
+# plt.show()
+
+# Create a separate figure showing only the cASU interval boxes
+plt.figure(figsize=(12, 6))
+
+# Create boxplots for cASU intervals only
+bp_casu_only = plt.boxplot(box_data, positions=range(1, len(intervals) + 1), 
+                          patch_artist=True, 
+                          boxprops=dict(linewidth=1),
+                          medianprops=dict(color='black', linewidth=2),
+                          widths=0.7, whis=2)
+
+# Apply density-based colors to boxes
+for patch, color in zip(bp_casu_only["boxes"], colors):
+    patch.set_facecolor(color)
+
+# Customize the plot
+plt.xlabel("cASU Intervals", fontsize=12)
+plt.ylabel("Regret 2", fontsize=12)
+plt.title("Regret 2 Distribution by cASU Intervals", fontsize=14)
+
+# Set tick positions and labels
+tick_positions = range(1, len(intervals) + 1)
+tick_labels = labels
+plt.xticks(tick_positions, tick_labels, fontsize=11)
+plt.yticks(fontsize=11)
+
+plt.grid(True, alpha=0.3, axis='y')
+plt.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.7)
+
+plt.tight_layout()
+plt.savefig("sd_3_oxy_casu_only.png", dpi=600)
+
+# Evaluate CAPEX for specific cASU values
+cASU_values = [0.68, 0.86, 0.90, 0.94, 0.98, 1.02]
+
+print("\nCAPEX values for different cASU:")
+for cASU in cASU_values:
+    CAPEX_ASU = 0.02*(59)**0.067/((1-0.95)**0.073) * (0.40*1000*3600/453.592)**cASU * 0.96 * 800/499.6 * 1.3
+    print(f"cASU = {cASU}: CAPEX = {CAPEX_ASU:.2f} MEUR")
+
 plt.show()
 
 

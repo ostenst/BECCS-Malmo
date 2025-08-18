@@ -22,16 +22,17 @@ def main():
         outcomes = outcomes.iloc[:min_length]
         print(f"Using first {min_length} rows from both files")
     
-    # Extract the cbio, celc, Time, and cheat columns from experiments and npv_ref, npv_amine from outcomes
+    # Extract the cbio, celc, Time, and cheat columns from experiments and npv_ref, npv_amine, regret_1 from outcomes
     cbio_values = experiments['cbio'].values
     celc_values = experiments['celc'].values
     time_values = experiments['Time'].values
     cheat_values = experiments['cheat'].values
     npv_ref_values = outcomes['npv_ref'].values
     npv_amine_values = outcomes['npv_amine'].values
+    regret_1_values = outcomes['regret_1'].values
     
     # Use only 10% of the data for faster plotting
-    sample_size = int(len(cbio_values) * 0.80)
+    sample_size = int(len(cbio_values) * 0.10)
     indices = np.random.choice(len(cbio_values), sample_size, replace=False)
     
     cbio_values = cbio_values[indices]
@@ -40,6 +41,7 @@ def main():
     cheat_values = cheat_values[indices]
     npv_ref_values = npv_ref_values[indices]
     npv_amine_values = npv_amine_values[indices]
+    regret_1_values = regret_1_values[indices]
     
     print(f"Using {sample_size} data points (10% of total)")
     
@@ -53,106 +55,57 @@ def main():
     print(f"Price ratio (celc/cbio) range: {price_ratio.min():.3f} to {price_ratio.max():.3f}")
     print(f"npv_ref range: {npv_ref_values.min():.2f} to {npv_ref_values.max():.2f}")
     
-    # Create the first scatter plot: cbio vs npv_ref with color coding based on Time values
+    # Create the first scatter plot: cbio vs npv_amine
     plt.figure(figsize=(18, 5))
     
     plt.subplot(1, 3, 1)
     
-    # Get unique time values and create a color map
-    unique_times = np.unique(time_values)
-    colors = plt.cm.Set3(np.linspace(0, 1, len(unique_times)))
-    
-    # Create scatter plot with different colors for each time period
-    for i, time_val in enumerate(unique_times):
-        mask = time_values == time_val
-        plt.scatter(cbio_values[mask], npv_ref_values[mask], 
-                   alpha=0.6, s=50, edgecolors='black', linewidth=0.5, 
-                   color=colors[i], label=f'Time: {time_val}')
-    
-    # Add trend line
-    z = np.polyfit(cbio_values, npv_ref_values, 1)
-    p = np.poly1d(z)
-    plt.plot(cbio_values, p(cbio_values), "r--", alpha=0.8, linewidth=2, label=f'Trend line')
-    
-    # Customize the plot
-    plt.xlabel('cbio (SEK/tonne)', fontsize=12)
-    plt.ylabel('npv_ref (million SEK)', fontsize=12)
-    plt.title('Impact of cbio (biomass price) on npv_ref\n(Colored by Time)', fontsize=14)
-    plt.grid(True, alpha=0.3)
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    
-    # Add correlation coefficient
-    correlation_cbio = np.corrcoef(cbio_values, npv_ref_values)[0, 1]
-    plt.text(0.05, 0.95, f'Correlation: {correlation_cbio:.3f}', 
-             transform=plt.gca().transAxes, fontsize=10, 
-             bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
-    
-    # Create the second scatter plot: price ratio vs npv_ref with color coding based on Time values
-    plt.subplot(1, 3, 2)
-    
-    # Create scatter plot with different colors for each time period (same color scheme as first plot)
-    for i, time_val in enumerate(unique_times):
-        mask = time_values == time_val
-        plt.scatter(price_ratio[mask], npv_ref_values[mask], 
-                   alpha=0.6, s=50, edgecolors='black', linewidth=0.5, 
-                   color=colors[i], label=f'Time: {time_val}')
-    
-    # Add trend line for price ratio
-    z_ratio = np.polyfit(price_ratio, npv_ref_values, 1)
-    p_ratio = np.poly1d(z_ratio)
-    plt.plot(price_ratio, p_ratio(price_ratio), "r--", alpha=0.8, linewidth=2, label=f'Trend line')
+    # Create scatter plot with gray color
+    plt.scatter(price_ratio, npv_ref_values, 
+               alpha=0.6, s=50, edgecolors='black', linewidth=0.5, 
+               color='gray')
     
     # Customize the plot
     plt.xlabel('Energy Price Ratio (celc/cbio)', fontsize=12)
-    plt.ylabel('npv_ref (million SEK)', fontsize=12)
-    plt.title('Impact of Energy Price Ratio on npv_ref\n(Colored by Time)', fontsize=14)
+    plt.ylabel('npv_ref (million EUR)', fontsize=12)
+    plt.title('Impact of Energy Price Ratio on npv_ref', fontsize=14)
     plt.grid(True, alpha=0.3)
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+
+    # Create the second scatter plot: price ratio vs npv_ref
+    plt.subplot(1, 3, 2)
     
-    # Add correlation coefficient
-    correlation_ratio = np.corrcoef(price_ratio, npv_ref_values)[0, 1]
-    plt.text(0.05, 0.95, f'Correlation: {correlation_ratio:.3f}', 
-             transform=plt.gca().transAxes, fontsize=10, 
-             bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
-    
-    # Create the third scatter plot: celc/bio vs celc/cheat with color representing npv_ref
-    plt.subplot(1, 3, 3)
-    
-    # Calculate celc/cheat ratio
-    celc_cheat_ratio = celc_values / (celc_values*cheat_values)
-    
-    # Create scatter plot with color representing npv_ref
-    scatter = plt.scatter(price_ratio, celc_cheat_ratio, 
-                         c=npv_ref_values, cmap='viridis', 
-                         alpha=0.7, s=50, edgecolors='black', linewidth=0.5)
-    
-    # Add colorbar
-    cbar = plt.colorbar(scatter)
-    cbar.set_label('npv_ref (million SEK)', fontsize=12)
+    # Create scatter plot with gray color
+    plt.scatter(price_ratio, npv_amine_values, 
+               alpha=0.6, s=50, edgecolors='black', linewidth=0.5, 
+               color='gray')
     
     # Customize the plot
-    plt.xlabel('celc/bio (Energy Price Ratio)', fontsize=12)
-    plt.ylabel('celc/cheat', fontsize=12)
-    plt.title('celc/bio vs celc/cheat\n(Colored by npv_ref)', fontsize=14)
+    plt.xlabel('Energy Price Ratio (celc/cbio)', fontsize=12)
+    plt.ylabel('npv_amine (million EUR)', fontsize=12)
+    plt.title('Impact of Energy Price Ratio on npv_amine', fontsize=14)
     plt.grid(True, alpha=0.3)
     
-    # Add correlation coefficient
-    correlation_third = np.corrcoef(price_ratio, celc_cheat_ratio)[0, 1]
-    plt.text(0.05, 0.95, f'Correlation: {correlation_third:.3f}', 
-             transform=plt.gca().transAxes, fontsize=10, 
-             bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+    # Create the third scatter plot: price ratio vs regret_1
+    plt.subplot(1, 3, 3)
+    
+    # Create scatter plot with gray color
+    plt.scatter(price_ratio, regret_1_values, 
+               alpha=0.6, s=50, edgecolors='black', linewidth=0.5, 
+               color='gray')
+    
+    # Customize the plot
+    plt.xlabel('Energy Price Ratio (celc/cbio)', fontsize=12)
+    plt.ylabel('regret_1 (million EUR)', fontsize=12)
+    plt.title('Impact of Energy Price Ratio on regret_1', fontsize=14)
+    plt.grid(True, alpha=0.3)
     
     plt.tight_layout()
     
     # Save the plots
-    plt.savefig('cbio_and_ratio_vs_npv_ref.png', dpi=300, bbox_inches='tight')
-    print("Plots saved as 'cbio_and_ratio_vs_npv_ref.png'")
-    
-    # Show the plots
-    # plt.show()
-    
-    # Create a new figure with box plots for both npv_ref and npv_amine distributions by celc/cbio ratio ranges
-    plt.figure(figsize=(15, 6))
+    plt.savefig('npv_regret_eon.png', dpi=600, bbox_inches='tight')
+
+    # Create a new figure with box plots for npv_ref, npv_amine, and regret_1 distributions by celc/cbio ratio ranges
+    plt.figure(figsize=(22, 6))
     
     # Define the ratio ranges
     ratio_ranges = [
@@ -161,8 +114,8 @@ def main():
         ((price_ratio >= 2) & (price_ratio <= 5), '2 ≤ celc/cbio ≤ 5')
     ]
     
-    # Create subplots for npv_ref and npv_amine
-    plt.subplot(1, 2, 1)
+    # Create subplots for npv_ref, npv_amine, and regret_1
+    plt.subplot(1, 3, 1)
     
     # Create box plots for npv_ref
     box_data_ref = []
@@ -172,7 +125,7 @@ def main():
         if np.any(mask):
             box_data_ref.append(npv_ref_values[mask])
             labels.append(label)
-            print(f"{label} (npv_ref): {np.sum(mask)} data points, mean NPV: {npv_ref_values[mask].mean():.2f} million SEK")
+            print(f"{label} (npv_ref): {np.sum(mask)} data points, mean NPV: {npv_ref_values[mask].mean():.2f} million EUR")
     
     # Create the box plot for npv_ref
     bp_ref = plt.boxplot(box_data_ref, tick_labels=labels, patch_artist=True)
@@ -183,17 +136,12 @@ def main():
         patch.set_facecolor(color)
     
     # Customize the plot
-    plt.ylabel('npv_ref (million SEK)', fontsize=12)
+    plt.ylabel('npv_ref (million EUR)', fontsize=12)
     plt.title('Distribution of npv_ref by Energy Price Ratio (celc/cbio) Ranges', fontsize=14)
     plt.grid(True, alpha=0.3, axis='y')
     
-    # Add statistics text
-    plt.text(0.02, 0.98, f'Total data points: {len(npv_ref_values)}', 
-             transform=plt.gca().transAxes, fontsize=10, 
-             bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
-    
     # Create subplot for npv_amine
-    plt.subplot(1, 2, 2)
+    plt.subplot(1, 3, 2)
     
     # Create box plots for npv_amine
     box_data_amine = []
@@ -201,7 +149,7 @@ def main():
     for mask, label in ratio_ranges:
         if np.any(mask):
             box_data_amine.append(npv_amine_values[mask])
-            print(f"{label} (npv_amine): {np.sum(mask)} data points, mean NPV: {npv_amine_values[mask].mean():.2f} million SEK")
+            print(f"{label} (npv_amine): {np.sum(mask)} data points, mean NPV: {npv_amine_values[mask].mean():.2f} million EUR")
     
     # Create the box plot for npv_amine
     bp_amine = plt.boxplot(box_data_amine, tick_labels=labels, patch_artist=True)
@@ -211,14 +159,50 @@ def main():
         patch.set_facecolor(color)
     
     # Customize the plot
-    plt.ylabel('npv_amine (million SEK)', fontsize=12)
+    plt.ylabel('npv_amine (million EUR)', fontsize=12)
     plt.title('Distribution of npv_amine by Energy Price Ratio (celc/cbio) Ranges', fontsize=14)
     plt.grid(True, alpha=0.3, axis='y')
     
-    # Add statistics text
-    plt.text(0.02, 0.98, f'Total data points: {len(npv_amine_values)}', 
-             transform=plt.gca().transAxes, fontsize=10, 
-             bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+    # Create subplot for regret_1
+    plt.subplot(1, 3, 3)
+    
+    # Create box plots for regret_1
+    box_data_regret = []
+    densities = []
+    
+    for mask, label in ratio_ranges:
+        if np.any(mask):
+            regret_data = regret_1_values[mask]
+            box_data_regret.append(regret_data)
+            
+            # Calculate density: ratio of positive regret values to total data points
+            positive_count = np.sum(regret_data > 0)
+            total_count = len(regret_data)
+            density = positive_count / total_count
+            densities.append(density)
+            
+            print(f"{label} (regret_1): {total_count} data points, mean regret: {regret_data.mean():.2f} million EUR, density: {density:.3f}")
+    
+    # Create the box plot for regret_1 with reduced spacing
+    bp_regret = plt.boxplot(box_data_regret, tick_labels=labels, patch_artist=True, widths=0.5)
+    
+    # Color the boxes using coolwarm colormap based on density
+    cmap = plt.cm.coolwarm
+    for i, (patch, density) in enumerate(zip(bp_regret['boxes'], densities)):
+        # Normalize density to [0, 1] for colormap
+        color = cmap(density)
+        patch.set_facecolor(color)
+    
+    # Color the median lines black
+    for median in bp_regret['medians']:
+        median.set_color('black')
+        median.set_linewidth(2)
+    
+    # Customize the plot
+    plt.ylabel('regret_1 (million EUR)', fontsize=12)
+    plt.title('Distribution of regret_1 by Energy Price Ratio (celc/cbio) Ranges\n(Colored by density of positive regret)', fontsize=14)
+    plt.grid(True, alpha=0.3, axis='y')
+    
     
     plt.tight_layout()
     
@@ -226,17 +210,17 @@ def main():
     plt.savefig('npv_distribution_by_ratio_ranges.png', dpi=300, bbox_inches='tight')
     print("Box plots saved as 'npv_distribution_by_ratio_ranges.png'")
     
-    # Show the box plots
-    plt.show()
+    # Save the regret box plot separately
+    plt.savefig('regret_box.png', dpi=600, bbox_inches='tight')
+    print("Regret box plot saved as 'regret_box.png'")
+    
     
     # Print some statistics
     print("\n=== STATISTICS ===")
-    print(f"Mean cbio: {cbio_values.mean():.2f} SEK/tonne")
-    print(f"Mean celc: {celc_values.mean():.2f} SEK/MWh")
+    print(f"Mean cbio: {cbio_values.mean():.2f} EUR/tonne")
+    print(f"Mean celc: {celc_values.mean():.2f} EUR/MWh")
     print(f"Mean price ratio: {price_ratio.mean():.3f}")
-    print(f"Mean npv_ref: {npv_ref_values.mean():.2f} million SEK")
-    print(f"Correlation cbio vs npv_ref: {correlation_cbio:.3f}")
-    print(f"Correlation price ratio vs npv_ref: {correlation_ratio:.3f}")
+    print(f"Mean npv_ref: {npv_ref_values.mean():.2f} million EUR")
     
     # Check for any outliers or interesting patterns
     print(f"\n=== DATA INSIGHTS ===")
@@ -255,8 +239,10 @@ def main():
     high_ratio = price_ratio > np.percentile(price_ratio, 75)
     low_ratio = price_ratio < np.percentile(price_ratio, 25)
     
-    print(f"High price ratio (>75th percentile) NPVs: {npv_ref_values[high_ratio].mean():.2f} million SEK")
-    print(f"Low price ratio (<25th percentile) NPVs: {npv_ref_values[low_ratio].mean():.2f} million SEK")
+    print(f"High price ratio (>75th percentile) NPVs: {npv_ref_values[high_ratio].mean():.2f} million EUR")
+    print(f"Low price ratio (<25th percentile) NPVs: {npv_ref_values[low_ratio].mean():.2f} million EUR")
+
+    plt.show()
 
 if __name__ == "__main__":
     main()

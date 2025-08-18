@@ -128,7 +128,9 @@ sampled_data = data_single.sample(n=sample_size, random_state=42)
 
 # Right subplot: Scatter plot
 # Create a color array for all points based on immature value
-colors_scatter = ['orchid' if immature < 1.9 else 'gray' for immature in sampled_data['immature']]
+colors_scatter = ['#DC6ACF' if immature < 1.9 else 'gray' for immature in sampled_data['immature']]
+#548687
+#1BE7FF
 
 # Plot all points at once with the color array
 ax2.scatter(sampled_data['capex_ratio'], sampled_data['regret_3'], 
@@ -157,4 +159,36 @@ ax2.grid(True, alpha=0.3)
 # Adjust layout and save
 plt.tight_layout()
 plt.savefig("sd_4_clc.png", dpi=600)
+# plt.show()
+
+# Create a separate figure showing only the immature interval boxes
+plt.figure(figsize=(12, 6))
+
+# Create boxplots for immature intervals only
+bp_immature_only = plt.boxplot(box_data, positions=range(1, len(intervals) + 1), 
+                              patch_artist=True, 
+                              boxprops=dict(linewidth=1),
+                              medianprops=dict(color='black', linewidth=2),
+                              widths=0.7, whis=2)
+
+# Apply density-based colors to boxes
+for patch, color in zip(bp_immature_only["boxes"], colors):
+    patch.set_facecolor(color)
+
+# Customize the plot
+plt.xlabel("immature Intervals", fontsize=12)
+plt.ylabel("Regret 3", fontsize=12)
+plt.title("Regret 3 Distribution by immature Intervals", fontsize=14)
+
+# Set tick positions and labels
+tick_positions = range(1, len(intervals) + 1)
+tick_labels = labels
+plt.xticks(tick_positions, tick_labels, fontsize=11)
+plt.yticks(fontsize=11)
+
+plt.grid(True, alpha=0.3, axis='y')
+plt.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.7)
+
+plt.tight_layout()
+plt.savefig("sd_4_clc_immature_only.png", dpi=600)
 plt.show()

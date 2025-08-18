@@ -105,4 +105,36 @@ plt.xlim(0, 11.1)
 plt.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.7)
 
 plt.savefig("sd_1_auction.png", dpi=600)
+# plt.show()
+
+# Create a separate figure showing only Auction=False boxes
+plt.figure(figsize=(12, 6))
+
+# Create boxplots for Auction=False only
+bp_false_only = plt.boxplot(box_data_false, positions=range(1, len(crc_intervals) + 1), 
+                           patch_artist=True, 
+                           boxprops=dict(linewidth=1),
+                           medianprops=dict(color='black', linewidth=2),
+                           widths=0.7, whis=2)
+
+# Apply density-based colors to boxes
+for patch, color in zip(bp_false_only["boxes"], colors_false):
+    patch.set_facecolor(color)
+
+# Customize the plot
+plt.xlabel("CRC Intervals", fontsize=12)
+plt.ylabel("Regret 1", fontsize=12)
+plt.title("Regret 1 Distribution by CRC Intervals (Auction=False Only)", fontsize=14)
+
+# Set tick positions and labels
+tick_positions = range(1, len(crc_intervals) + 1)
+tick_labels = labels
+plt.xticks(tick_positions, tick_labels, fontsize=11)
+plt.yticks(fontsize=11)
+
+plt.grid(True, alpha=0.3, axis='y')
+plt.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.7)
+
+plt.tight_layout()
+plt.savefig("sd_1_auction_false_only.png", dpi=600)
 plt.show()

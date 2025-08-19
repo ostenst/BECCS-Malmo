@@ -233,16 +233,17 @@ def regret_BECCS(
     TPC = EPCC*(1 + contingencies) # Applying Ramboll's logic
     OXY.CAPEX = TPC*(1 + ownercost)*(1 + overrun)
 
-    # # Calculate CO2 capture costs for a reality check:
-    # CRF = (1+dr)**lifetime * dr / ((1+dr)**lifetime - 1)
-    # # CAC = CAPEX/tCO2 + OPEXE + OPEXvar + OPEXfix + TS
-    # for TECH in [AMINE, OXY, CLC]:
-    #     CAC = (TECH.CAPEX*CRF + opfix)*10**6 / (TECH.mcaptured / 1000 * 3600 * TECH.operating) + (ctrans + cstore) #Simplified, without OPEXe and OPEXvar
-    #     print(f"{TECH.name}: {CAC:.2f} EUR/tCO2")
-    #     print(TECH.CAPEX*CRF *10**6/ (TECH.mcaptured / 1000 * 3600 * TECH.operating) )
-    #     print(opfix *10**6 / (TECH.mcaptured / 1000 * 3600 * TECH.operating) )
-    #     print(ctrans)
-    #     print(cstore)
+    # Calculate CO2 capture costs for a reality check:
+    CRF = (1+dr)**lifetime * dr / ((1+dr)**lifetime - 1)
+    # CAC = CAPEX/tCO2 + OPEXE + OPEXvar + OPEXfix + TS
+    for TECH in [AMINE, OXY, CLC]:
+        CAC = (TECH.CAPEX*CRF + opfix)*10**6 / (TECH.mcaptured / 1000 * 3600 * TECH.operating) + (ctrans + cstore) #Simplified, without OPEXe and OPEXvar
+        print(f"{TECH.name}: {CAC:.2f} EUR/tCO2")
+        print(TECH.CAPEX*CRF *10**6/ (TECH.mcaptured / 1000 * 3600 * TECH.operating) )
+        print(opfix *10**6 / (TECH.mcaptured / 1000 * 3600 * TECH.operating) )
+        print(opfix/TECH.CAPEX, " here")
+        print(ctrans)
+        print(cstore)
     
     def calculate_NPV(TECH, cbio, celc, ETS, crc):
         analysis_period = timing + lifetime  # Example: invest after 5, lifetime of 25 => 30 years

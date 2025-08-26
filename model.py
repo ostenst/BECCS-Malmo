@@ -112,6 +112,7 @@ def regret_BECCS(
     Qfgc = 33.3
     Qcond = 106.6
     Qnet = Qcond + Qfgc
+    O2excess = 1.1 #Leckner, 2023
 
     mfuel = Qfuel/LHV           #[kgf/s]
     memitted = 1.0105 * mfuel   #[kgCO2/s]
@@ -152,11 +153,11 @@ def regret_BECCS(
 
     mCO2 = 1.0105 * mfuel               #[kgCO2/s]
     mH2O = 0.7416 * mfuel               #[kgH2O/s]
-    mfluegas = mCO2 + mH2O + O2oxy*32   #[kg/s], inside the post-oxidation chamber (incl. O2oxy)
+    mfluegas = mCO2 + mH2O + O2oxy*32*O2excess   #[kg/s], inside the post-oxidation chamber (incl. O2oxy)
     mash = 0.01375*mfuel + 1/3600*Qfuel  #[kg/s], equals ash+OC massflows, 1 kgOC/MWh_bränsle - Magnus
 
     P = REF.P
-    Pasu = Wasu/1000*O2oxy*32           #[MW] 
+    Pasu = Wasu/1000*O2oxy*32*O2excess           #[MW] 
     Pnet = P - Pasu - Wcompr - Qcool
     mcaptured = mCO2 * rate             #[kgCO2/s], assuming some CO2 is just vented...
     memitted = mCO2 * (1-rate)
@@ -170,7 +171,7 @@ def regret_BECCS(
 
     # Determining oxyfuel energy balance
     P = REF.P
-    Pasu = Wasu/1000*O2demand*32        #[MW], Macroscopic? Or from Anders maybe?
+    Pasu = Wasu/1000*O2demand*32*O2excess        #[MW], Macroscopic? Or from Anders maybe?
     Pnet = P - Pasu - Wcompr - Qcool
     mcaptured = mCO2 * rate             #[kgCO2/s], assuming some CO2 is just vented...
     memitted = mCO2 * (1-rate)
@@ -184,13 +185,14 @@ def regret_BECCS(
     REF.shopping_list = {
     }
     AMINE.shopping_list = {
-        'amines' : cAM * AMINE.mcaptured/16.6, # assuming a linear relationship between mcaptured and CAPEX... Let's remove the CL capex cost:
-    }
+        'amines' : cAM * AMINE.mcaptured/16.6 * CEPCI/550 *1.3, # Check EXCEL for AMINE assumptions. Assuming a linear relationship between mcaptured and CAPEX... Let's remove the CL capex cost:
+    } # NOTE: This capex is high and will affect the results
+
     CLC.shopping_list = {
         'FR' : 4.98*(Afr/1531)**cFR*usd * CEPCI/585.7 *1.4, # constants are "installation factors" from Macroscopic
         'cyclone' : 0.345*( 3 )*usd * CEPCI/576.1 *1.4, 
         'POC' : ( 48.67*10**-6*(CLC.mfluegas) * (1 + np.exp(0.018*(850+273.15)-26.4)) * 1/(0.995-0.98) )*usd * CEPCI/585.7 *1.3, #NOTE: low cost, but I double checked this now!
-        'ASU' : 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*1000*3600/453.592)**cASU *usd * CEPCI/499.6 *1.3,
+        'ASU' : 0.02*(59)**0.067/((1-0.95)**0.073) * (O2oxy*O2excess*1000*3600/453.592)**cASU *usd * CEPCI/499.6 *1.3,
         'OCash' : (4.6*(mash/6.7)**0.56)*usd * CEPCI/603.1 *1.2,
         'CL' : ccond * mcaptured/37.31 * CEPCI/607.5 *1.3,  #Assuming that Deng had cost year = 2019 NOTE: unclear if installation 1.3 should be included or not? NOTE: Kjästad estimates CL cost in SKEPPKOSTNAD excel?
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2, #Function from Judit, 4000m3 from Ramboll, CEPCI from Google
@@ -201,7 +203,7 @@ def regret_BECCS(
     # print("Sum of CLC CAPEX: ", sum(CLC.shopping_list.values()))    
 
     OXY.shopping_list = {
-        'ASU' : 0.02*(59)**0.067/((1-0.95)**0.073) * (O2demand*1000*3600/453.592)**cASU *usd * CEPCI/499.6 *1.3,
+        'ASU' : 0.02*(59)**0.067/((1-0.95)**0.073) * (O2demand*O2excess*1000*3600/453.592)**cASU *usd * CEPCI/499.6 *1.3,
         'CL' : ccond * mcaptured/37.31 * CEPCI/607.5 *1.3,  
         'interim' : (53000+2400*(4000)**0.6 )*10**-6 *usd * CEPCI/499.6 *1.2,  
     }
@@ -213,14 +215,14 @@ def regret_BECCS(
     # Escalating CAPEX of CLC and OXY
     # initial_items = ['FR', 'cyclone', 'OCash',]
     # delayed_items = ['CL', 'POC', 'ASU', 'interim']
-    initial_items = []
+    # initial_items = []
     delayed_items = ['FR', 'cyclone', 'OCash', 'CL', 'POC', 'ASU', 'interim', 'HEX']
 
-    BEC =  sum(value for key, value in CLC.shopping_list.items() if key in initial_items)
-    EPCC = BEC*(1 + EPC) # To harmonize with Ramboll amine costs
-    TPC = EPCC*(1 + contingencies) # Applying Ramboll's logic
-    TOC = TPC*(1 + ownercost)
-    CLC.CAPEX_initial = TOC*(1 + immature)*(1 + overrun)
+    # BEC =  sum(value for key, value in CLC.shopping_list.items() if key in initial_items)
+    # EPCC = BEC*(1 + EPC) # To harmonize with Ramboll amine costs
+    # TPC = EPCC*(1 + contingencies) # Applying Ramboll's logic
+    # TOC = TPC*(1 + ownercost)
+    # CLC.CAPEX_initial = TOC*(1 + immature)*(1 + overrun)
 
     BEC =  sum(value for key, value in CLC.shopping_list.items() if key in delayed_items)
     EPCC = BEC*(1 + EPC)
@@ -233,17 +235,17 @@ def regret_BECCS(
     TPC = EPCC*(1 + contingencies) # Applying Ramboll's logic
     OXY.CAPEX = TPC*(1 + ownercost)*(1 + overrun)
 
-    # Calculate CO2 capture costs for a reality check:
-    CRF = (1+dr)**lifetime * dr / ((1+dr)**lifetime - 1)
-    # CAC = CAPEX/tCO2 + OPEXE + OPEXvar + OPEXfix + TS
-    for TECH in [AMINE, OXY, CLC]:
-        CAC = (TECH.CAPEX*CRF + opfix)*10**6 / (TECH.mcaptured / 1000 * 3600 * TECH.operating) + (ctrans + cstore) #Simplified, without OPEXe and OPEXvar
-        print(f"{TECH.name}: {CAC:.2f} EUR/tCO2")
-        print(TECH.CAPEX*CRF *10**6/ (TECH.mcaptured / 1000 * 3600 * TECH.operating) )
-        print(opfix *10**6 / (TECH.mcaptured / 1000 * 3600 * TECH.operating) )
-        print(opfix/TECH.CAPEX, " here")
-        print(ctrans)
-        print(cstore)
+    # # Calculate CO2 capture costs for a reality check:
+    # CRF = (1+dr)**lifetime * dr / ((1+dr)**lifetime - 1)
+    # # CAC = CAPEX/tCO2 + OPEXE + OPEXvar + OPEXfix + TS
+    # for TECH in [AMINE, OXY, CLC]:
+    #     CAC = (TECH.CAPEX*CRF + opfix)*10**6 / (TECH.mcaptured / 1000 * 3600 * TECH.operating) + (ctrans + cstore) #Simplified, without OPEXe and OPEXvar
+    #     print(f"{TECH.name}: {CAC:.2f} EUR/tCO2")
+    #     print(TECH.CAPEX*CRF *10**6/ (TECH.mcaptured / 1000 * 3600 * TECH.operating) )
+    #     print(opfix *10**6 / (TECH.mcaptured / 1000 * 3600 * TECH.operating) )
+    #     print(opfix/TECH.CAPEX, " here")
+    #     print(ctrans)
+    #     print(cstore)
     
     def calculate_NPV(TECH, cbio, celc, ETS, crc):
         analysis_period = timing + lifetime  # Example: invest after 5, lifetime of 25 => 30 years

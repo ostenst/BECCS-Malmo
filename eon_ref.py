@@ -67,9 +67,11 @@ def main():
     
     # Customize the plot
     plt.xlabel('Energy Price Ratio (celc/cbio)', fontsize=12)
-    plt.ylabel('npv_ref (million EUR)', fontsize=12)
+    # plt.ylabel('npv_ref (million EUR)', fontsize=12)
     plt.title('Impact of Energy Price Ratio on npv_ref', fontsize=14)
     plt.grid(True, alpha=0.3)
+    plt.tick_params(axis='y', labelsize=14)
+    plt.tick_params(axis='x', labelsize=14)
 
     # Create the second scatter plot: price ratio vs npv_ref
     plt.subplot(1, 3, 2)
@@ -81,9 +83,11 @@ def main():
     
     # Customize the plot
     plt.xlabel('Energy Price Ratio (celc/cbio)', fontsize=12)
-    plt.ylabel('npv_amine (million EUR)', fontsize=12)
+    # plt.ylabel('npv_amine (million EUR)', fontsize=12)
     plt.title('Impact of Energy Price Ratio on npv_amine', fontsize=14)
     plt.grid(True, alpha=0.3)
+    plt.tick_params(axis='y', labelsize=14)
+    plt.tick_params(axis='x', labelsize=14)
     
     # Create the third scatter plot: price ratio vs regret_1
     plt.subplot(1, 3, 3)
@@ -95,10 +99,11 @@ def main():
     
     # Customize the plot
     plt.xlabel('Energy Price Ratio (celc/cbio)', fontsize=12)
-    plt.ylabel('regret_1 (million EUR)', fontsize=12)
+    # plt.ylabel('regret_1 (million EUR)', fontsize=12)
     plt.title('Impact of Energy Price Ratio on regret_1', fontsize=14)
     plt.grid(True, alpha=0.3)
-    
+    plt.tick_params(axis='y', labelsize=14)
+    plt.tick_params(axis='x', labelsize=14)
     plt.tight_layout()
     
     # Save the plots
@@ -136,7 +141,7 @@ def main():
         patch.set_facecolor(color)
     
     # Customize the plot
-    plt.ylabel('npv_ref (million EUR)', fontsize=12)
+    # plt.ylabel('npv_ref (million EUR)', fontsize=12)
     plt.title('Distribution of npv_ref by Energy Price Ratio (celc/cbio) Ranges', fontsize=14)
     plt.grid(True, alpha=0.3, axis='y')
     
@@ -159,7 +164,7 @@ def main():
         patch.set_facecolor(color)
     
     # Customize the plot
-    plt.ylabel('npv_amine (million EUR)', fontsize=12)
+    # plt.ylabel('npv_amine (million EUR)', fontsize=12)
     plt.title('Distribution of npv_amine by Energy Price Ratio (celc/cbio) Ranges', fontsize=14)
     plt.grid(True, alpha=0.3, axis='y')
     
@@ -199,7 +204,7 @@ def main():
         median.set_linewidth(2)
     
     # Customize the plot
-    plt.ylabel('regret_1 (million EUR)', fontsize=12)
+    # plt.ylabel('regret_1 (million EUR)', fontsize=12)
     plt.title('Distribution of regret_1 by Energy Price Ratio (celc/cbio) Ranges\n(Colored by density of positive regret)', fontsize=14)
     plt.grid(True, alpha=0.3, axis='y')
     
@@ -211,7 +216,7 @@ def main():
     print("Box plots saved as 'npv_distribution_by_ratio_ranges.png'")
     
     # Save the regret box plot separately
-    plt.savefig('regret_box.png', dpi=600, bbox_inches='tight')
+    plt.savefig('regret_box.png', dpi=400, bbox_inches='tight')
     print("Regret box plot saved as 'regret_box.png'")
     
     

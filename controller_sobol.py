@@ -35,18 +35,18 @@ model.uncertainties = [
     RealParameter("celc", 10, 100),         # Beiron tycker 100?
     RealParameter("cheat", 0.50, 0.95),
     RealParameter("cbio", 20, 100),         # BEIRON, insikter
-    RealParameter("CEPCI", 700, 900),
+    RealParameter("CEPCI", 750, 950),
     # RealParameter("sek", 0.08, 0.10),
     # RealParameter("usd", 0.90, 1.00),
     RealParameter("ctrans", 52, 70),        # EUR/tCO2, Kjärstad  450nm, INCLUDES C&L???
     RealParameter("cstore", 12, 16),        # EUR/tCO2, Kjärstad @NL, calculate by total_system - only_transport
-    RealParameter("crc", 25, 300),          # Reference cost
+    RealParameter("crc", 50, 400),          # 225-300 EUR/tCO2 around 2030-2035, Thinks Rufus.
     RealParameter("cmea", 2.2, 3.1),         # EUR/kg, Ramboll
     RealParameter("coc", 200, 600),         # EUR/t, Magnus/Felicia
 
-    RealParameter("cAM", 153, 230),       # +-20% of Ramboll CAPEX MEUR
+    RealParameter("cAM", 153, 230),       # BASIC, check EXCEL for assumptions.+-20% of Ramboll CAPEX MEUR
     RealParameter("cFR", 0.48, 0.72),       # +-20% of Macroscopic CAPEX exponent   
-    RealParameter("cASU", 0.68, 1.02),      # +-20% of Macroscopic CAPEX exponent   
+    RealParameter("cASU", 0.68, 1.02),      # +-20% of Macroscopic CAPEX exponent  
     RealParameter("ccond", 20, 30),      # MEUR/kgCO2/s Deng 2019
     RealParameter("opfix", 3.6, 5.4),      # Ramboll 2023 MEUR/yr
 
@@ -54,7 +54,7 @@ model.uncertainties = [
     RealParameter("contingencies", 0.15, 0.35), # Ramboll uses 25%
     RealParameter("ownercost", 0.03, 0.07),             # Ramboll uses 5%
     RealParameter("overrun", 0.00, 0.45),           #Beiron FOAK=NOAK costs
-    RealParameter("immature", 0.00, 3.00),       
+    RealParameter("immature", 0.00, 4.00),       
 
     RealParameter("EUA", 0, 10),    # +ETS increases
     RealParameter("ceiling", 200, 350),

@@ -135,6 +135,10 @@ ax2.set_title("Regret 3 vs Capex Ratio (Amine/CLC)", fontsize=16)
 ax2.tick_params(axis='both', labelsize=13)
 ax2.tick_params(axis='x', labelsize=13)  # Explicitly set x-axis tick fontsize to match ax1
 
+# Set explicit x-axis ticks to ensure 1 is included
+ax2.set_xticks([0, 1, 2, 3, 4, 5, 6, 7, 8])
+ax2.set_xticklabels(['0', '1', '2', '3', '4', '5', '6', '7', '8'])
+
 # Add horizontal line at y = 0
 ax2.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.7)
 

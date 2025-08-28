@@ -194,11 +194,11 @@ subsets = {
     "All Data": outcomes_df,
     "High-regret": outcomes_df[
         ((outcomes_df["timing"] == 5) | (outcomes_df["timing"] == 10)) &
-        (outcomes_df["cASU"] < 0.90)
+        (outcomes_df["cASU"] < 0.98)
     ],
     "Low-regret": outcomes_df[
         ((outcomes_df["timing"] == 15) | (outcomes_df["timing"] == 20)) &
-        (outcomes_df["cASU"] > 0.90)
+        (outcomes_df["cASU"] > 0.98)
     ]
 }
 

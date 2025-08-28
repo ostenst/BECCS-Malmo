@@ -118,14 +118,6 @@ print(outcomes_df)
 
 
 ## ------------------ PLOTTING REGRET_1 ------------------ ##
-# Define the subsets
-# subsets = { # Previous subsets
-#     "All Data": outcomes_df,
-#     "Time = Downtime": outcomes_df[outcomes_df["Time"] == "Downtime"],
-#     "Auction = False and Time = Downtime": outcomes_df[
-#         (outcomes_df["Auction"] == False) & (outcomes_df["Time"] == "Downtime")
-#     ]
-# }
 subsets = {
     "All Data": outcomes_df,
     "High-regret": outcomes_df[

@@ -148,7 +148,7 @@ if __name__ == "__main__":
     feature_limits = {
         "Auction": 0,           # Auction must be False (converted to 0 earlier)
         "Integration": 1, 
-        "crc": (None, 85)      # CRC must be less than 100
+        "crc": (None, 100)      # CRC must be less than 100
     }
     for key, val in feature_limits.items():
         if isinstance(val, tuple):

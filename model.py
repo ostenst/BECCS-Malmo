@@ -112,7 +112,7 @@ def regret_BECCS(
     Qfgc = 33.3
     Qcond = 106.6
     Qnet = Qcond + Qfgc
-    O2excess = 1.1 #Leckner, 2023
+    O2excess = 1.2 # Fredrik Lind, email
 
     mfuel = Qfuel/LHV           #[kgf/s]
     memitted = 1.0105 * mfuel   #[kgCO2/s]

@@ -208,7 +208,7 @@ cmap = cm.RdYlGn_r
 cmap = cm.coolwarm
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
-ymin, ymax = -250, 250
+ymin, ymax = -250, 400
 
 # Prepare data for plotting (reversed order)
 plot_data = []
@@ -283,7 +283,7 @@ cmap = cm.RdYlGn_r
 cmap = cm.coolwarm
 norm = mcolors.Normalize(vmin=0, vmax=1)
 
-ymin, ymax = -250, 250
+ymin, ymax = -250, 400
 
 # Prepare data for plotting (reversed order)
 plot_data = []

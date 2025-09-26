@@ -28,14 +28,14 @@ ax.fill_between(future_years_extended, low_scenario, high_scenario,
 # Green CRC range lines from 2025 onward with triangle markers
 x_vals = np.arange(2025, 2056, 3)  # markers every 3 years
 
-y_vals_low = np.full_like(x_vals, 25)
-ax.plot(x_vals, y_vals_low, color='mediumseagreen', lw=1.5, marker='^', markersize=6, label='_nolegend_')
+y_vals_low = np.full_like(x_vals, 50)
+ax.plot(x_vals, y_vals_low, color='deepskyblue', lw=1.5, marker='^', markersize=6, label='_nolegend_')
 
-y_vals_high = np.full_like(x_vals, 300)
-ax.plot(x_vals, y_vals_high, color='mediumseagreen', lw=1.5, marker='v', markersize=6, label='_nolegend_')
+y_vals_high = np.full_like(x_vals, 400)
+ax.plot(x_vals, y_vals_high, color='deepskyblue', lw=1.5, marker='v', markersize=6, label='_nolegend_')
 
 # Gray ETS cap band from 2025 onward
-ax.fill_between([2030, 2056], 200, 350, color='gray', alpha=0.2, label="ETS cap (€200–350)")
+ax.fill_between([2030, 2056], 200, 350, color='gray', alpha=0.2, label="ETS cap (200–350€/tCO₂)")
 ax.plot([2030, 2056], [200, 200], color='gray', linestyle='-', linewidth=1.5)
 ax.plot([2030, 2056], [350, 350], color='gray', linestyle='-', linewidth=1.5)
 
@@ -49,7 +49,7 @@ ax.plot(future_years_extended, high_scenario, 'k--', label="High (+10 €/yr)")
 
 # Subsidy line
 ax.plot([2028, 2043], [160, 160], color='crimson', linestyle='-', linewidth=2.0,
-        label="Auction subsidy Stockholm Exergi (€160/t)")
+        label="Auction subsidy Stockholm Exergi (160€/tCO₂)")
 
 # Labels and title with adjusted font sizes
 ax.set_xlabel("Year", fontsize=13)
@@ -61,7 +61,7 @@ ax.tick_params(axis='both', labelsize=11)
 
 # Custom legend entry for CRC range
 custom_lines = [
-    Line2D([0], [0], color='mediumseagreen', lw=1.5, label='CRC range (€25–300)')
+    Line2D([0], [0], color='deepskyblue', lw=2, label='CRC range (50–400€/tCO₂)')
 ]
 existing_handles, existing_labels = ax.get_legend_handles_labels()
 ax.legend(handles=existing_handles + custom_lines, loc='upper left', fontsize=11)

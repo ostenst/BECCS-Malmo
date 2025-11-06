@@ -10,7 +10,7 @@ data = pd.concat([experiments, outcomes], axis=1)
 # Filter Integration == False
 data = data[data["Auction"] == False].reset_index(drop=True)
 data = data[data["Integration"] == True].reset_index(drop=True)
-data = data[data["crc"] < 100].reset_index(drop=True)
+data = data[data["crc"] < 70].reset_index(drop=True)
 data_true = data[data["Procurement"] == True].reset_index(drop=True)
 data_false = data[data["Procurement"] == False].reset_index(drop=True)
 
@@ -108,4 +108,85 @@ plt.xlim(0, 8.9)
 plt.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.7)
 
 plt.savefig("sd_2_integration.png", dpi=600)
+# plt.show()
+
+# Create a separate figure showing only Procurement=False boxes
+print("\nDensities for Procurement=False only:")
+for i, (start, end) in enumerate(ceiling_intervals):
+    count_false = len(box_data_false[i])
+    print(f"ceiling {start}-{end}: Procurement=False: {densities_false[i]:.3f} ({count_false} points)")
+
+plt.figure(figsize=(12, 3.75))
+
+# Create boxplots for Procurement=False only
+bp_false_only = plt.boxplot(box_data_false, positions=range(1, len(ceiling_intervals) + 1), 
+                           patch_artist=True, 
+                           boxprops=dict(linewidth=1),
+                           medianprops=dict(color='black', linewidth=2),
+                           widths=0.7, whis=2)
+
+# Apply density-based colors to boxes
+for patch, color in zip(bp_false_only["boxes"], colors_false):
+    patch.set_facecolor(color)
+
+# Customize the plot
+plt.xlabel("Ceiling Intervals", fontsize=12)
+plt.ylabel("Regret 1", fontsize=12)
+plt.title("Regret 1 Distribution by Ceiling Intervals (Procurement=False Only)", fontsize=14)
+
+# Set tick positions and labels
+tick_positions = range(1, len(ceiling_intervals) + 1)
+tick_labels = labels
+plt.xticks(tick_positions, tick_labels, fontsize=14)
+plt.yticks(fontsize=14)
+plt.gca().yaxis.set_major_locator(plt.MaxNLocator(nbins=6))
+
+plt.grid(True, alpha=0.3, axis='y')
+plt.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.7)
+# plt.xlim(0.5, len(ceiling_intervals) + 0.5)
+# get ylimits 
+y_limits = plt.ylim()
+plt.ylim(-150, y_limits[1])
+
+plt.tight_layout()
+plt.savefig("sd_2_integration_false_only.png", dpi=600)
+# plt.show()
+
+# Create a separate figure showing only Procurement=True boxes
+print("\nDensities for Procurement=True only:")
+for i, (start, end) in enumerate(ceiling_intervals):
+    count_true = len(box_data_true[i])
+    print(f"ceiling {start}-{end}: Procurement=True: {densities_true[i]:.3f} ({count_true} points)")
+
+plt.figure(figsize=(12, 3.75))
+
+# Create boxplots for Procurement=True only
+bp_true_only = plt.boxplot(box_data_true, positions=range(1, len(ceiling_intervals) + 1), 
+                          patch_artist=True, 
+                          boxprops=dict(linewidth=1),
+                          medianprops=dict(color='black', linewidth=2),
+                          widths=0.7, whis=2)
+
+# Apply density-based colors to boxes
+for patch, color in zip(bp_true_only["boxes"], colors_true):
+    patch.set_facecolor(color)
+
+# Customize the plot
+plt.xlabel("Ceiling Intervals", fontsize=12)
+plt.ylabel("Regret 1", fontsize=12)
+plt.title("Regret 1 Distribution by Ceiling Intervals (Procurement=True Only)", fontsize=14)
+
+# Set tick positions and labels
+tick_positions = range(1, len(ceiling_intervals) + 1)
+tick_labels = labels
+plt.xticks(tick_positions, tick_labels, fontsize=14)
+plt.yticks(fontsize=14)
+plt.gca().yaxis.set_major_locator(plt.MaxNLocator(nbins=6))
+
+plt.grid(True, alpha=0.3, axis='y')
+plt.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.7)
+# plt.xlim(0.5, len(ceiling_intervals) + 0.5)
+
+plt.tight_layout()
+plt.savefig("sd_2_integration_true_only.png", dpi=600)
 plt.show()

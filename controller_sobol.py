@@ -118,7 +118,7 @@ def analyze(results, ooi):
     return sobol_stats, s2, s2_conf, problem
 
 print("NOTE: Adapt the analyze() function to the outcome you want to analyze")
-sobol_stats, s2, s2_conf, problem = analyze(results, "regret_3")
+sobol_stats, s2, s2_conf, problem = analyze(results, "regret_1")
 print(sobol_stats)
 print(s2)
 print(s2_conf)
@@ -133,7 +133,7 @@ sns.barplot(
     x=sobol_stats_sorted["ST"],  # Sobol indices on x-axis
     xerr=sobol_stats_sorted["ST_conf"],  # Confidence intervals as error bars
     capsize=0.2,
-    color="crimson"
+    color="#FEBB98"
 )
 plt.ylabel("Parameter")
 plt.xlabel("Total Sobol Index (ST)")
@@ -182,10 +182,10 @@ for i in range(n):
             ax.plot(x_vals, y_vals, color='grey', alpha=0.6, linewidth=lw)
 
 # Plot ST nodes (base)
-ax.scatter(x, y, s=ST_scaled, color='crimson', alpha=1.0, edgecolor='none')
+ax.scatter(x, y, s=ST_scaled, color='#FEBB98', alpha=1.0, edgecolor='none')
 
 # Overlay S1 nodes (on top)
-ax.scatter(x, y, s=S1_scaled, color='lightpink', alpha=1.0, edgecolor='none')
+ax.scatter(x, y, s=S1_scaled, color='#D55174', alpha=1.0, edgecolor='none')
 
 # Add labels
 for i in range(n):

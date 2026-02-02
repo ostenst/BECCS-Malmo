@@ -10,7 +10,7 @@ data = pd.concat([experiments, outcomes], axis=1)
 # Filter Integration == False
 data = data[data["Auction"] == False].reset_index(drop=True)
 data = data[data["Integration"] == True].reset_index(drop=True)
-data = data[data["crc"] < 70].reset_index(drop=True)
+data = data[data["crc"] < 100].reset_index(drop=True)
 data_true = data[data["Procurement"] == True].reset_index(drop=True)
 data_false = data[data["Procurement"] == False].reset_index(drop=True)
 
@@ -58,8 +58,8 @@ positions_true = [0.7, 2.9, 5.1, 7.3]
 positions_false = [1.7, 3.9, 6.1, 8.3]
 
 # Color boxes based on density using the magma colormap (dark purple for low density, yellow/white for high)
-colors_true = [plt.cm.magma_r(d) for d in densities_true]
-colors_false = [plt.cm.magma_r(d) for d in densities_false]
+colors_true = [plt.cm.coolwarm(d) for d in densities_true]
+colors_false = [plt.cm.coolwarm(d) for d in densities_false]
 
 bp1 = plt.boxplot(box_data_true, positions=positions_true, patch_artist=True, 
                   boxprops=dict(linewidth=1),
@@ -145,8 +145,8 @@ plt.grid(True, alpha=0.3, axis='y')
 plt.axhline(y=0, color='black', linestyle='-', linewidth=1, alpha=0.7)
 # plt.xlim(0.5, len(EUA_intervals) + 0.5)
 # get ylimits 
-y_limits = plt.ylim()
-plt.ylim(-150, y_limits[1])
+# y_limits = plt.ylim()
+# plt.ylim(-200, y_limits[1])
 
 plt.tight_layout()
 plt.savefig("sd_2_integration_false_only.png", dpi=600)
